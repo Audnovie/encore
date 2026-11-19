@@ -1,0 +1,186 @@
+name: iPhone app
+
+on:
+  push:
+    branches: [main]
+    # Notes alone don't change the app: no rebuild (and no new release) for them.
+    paths-ignore: ['**.md']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ios-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  ios:
+    name: Build, test on the simulator against Navidrome, make Encore.ipa
+    runs-on: macos-26
+    timeout-minutes: 75
+    defaults:
+      run:
+        # bash -eo pipefail: a failing command before a "| tee" fails the step
+        shell: bash
+    env:
+      # the app tests fail (instead of skipping) when the test servers aren't there
+      TEST_RUNNER_ENCORE_CI: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Tools
+        run: |
+          mkdir -p logs
+          brew install xcodegen nginx ffmpeg 2>&1 | tail -5
+          {
+            sw_vers
+            xcodebuild -version
+            xcodegen --version
+            nginx -v
+            ffmpeg -version | sed -n 1p
+            python3 --version
+            xcrun simctl list runtimes
+          } 2>&1 | tee logs/versions.log
+
+      - name: Audio output for the simulator
+        run: bash ios/ci/audio_check.sh 2>&1 | tee logs/audio.log
+
+      - name: Test servers (Navidrome, nginx serving this commit's Encore page)
+        run: bash ios/ci/start_servers.sh 2>&1 | tee logs/servers.log
+
+      - name: Generate the Xcode project
+        working-directory: ios
+        run: xcodegen generate 2>&1 | tee ../logs/xcodegen.log
+
+      - name: Pick and start a simulator
+        run: |
+          UDID=$(xcrun simctl list devices available -j | python3 -c '
+          import json, sys
+          d = json.load(sys.stdin)["devices"]
+          best = None
+          for rt, devs in d.items():
+              if "iOS" not in rt: continue
+              ver = tuple(int(x) for x in rt.split("iOS-")[-1].split("-"))
+              for dev in devs:
+                  if dev["name"] in ("iPhone 17 Pro", "iPhone 17", "iPhone 16 Pro"):
+                      if best is None or ver > best[0]: best = (ver, dev["udid"], dev["name"])
+          print(best[1])
+          sys.stderr.write("simulator: %s iOS %s\n" % (best[2], ".".join(map(str, best[0]))))
+          ')
+          echo "SIM=$UDID" >> "$GITHUB_ENV"
+          xcrun simctl boot "$UDID" || true
+
+      - name: Build for the simulator
+        working-directory: ios
+        run: |
+          set -o pipefail
+          xcodebuild build-for-testing -project Encore.xcodeproj -scheme Encore \
+            -destination "generic/platform=iOS Simulator" -derivedDataPath build/sim \
+            ONLY_ACTIVE_ARCH=YES ARCHS=arm64 \
+            2>&1 | tee ../logs/sim-build-full.log | grep -E "error:|warning: .*/(Encore|EncoreTests|EncoreUITests)/|BUILD|\*\* " | tee ../logs/sim-build.log
+
+      - name: Wait for the simulator
+        run: |
+          xcrun simctl bootstatus "$SIM" -b | tail -1
+          # the app asks before using the local network; the test servers are on 127.0.0.1, which doesn't need it
+          xcrun simctl status_bar "$SIM" override --time 9:41 || true
+
+      - name: Unit tests (queue, news log, addresses, the real player with tone files)
+        working-directory: ios
+        run: |
+          set -o pipefail
+          xcodebuild test-without-building -project Encore.xcodeproj -scheme Encore \
+            -destination "platform=iOS Simulator,id=$SIM" -derivedDataPath build/sim \
+            -only-testing:EncoreTests -resultBundlePath build/Unit.xcresult \
+            2>&1 | tee ../logs/unit-full.log | grep -E "error:|Test Case|Executed|\*\* " | tee ../logs/unit.log
+
+      - name: App tests against Navidrome
+        if: success() || failure()
+        working-directory: ios
+        run: |
+          set -o pipefail
+          mkdir -p ../logs/shots
+          ( i=0; while true; do i=$((i+1)); xcrun simctl io "$SIM" screenshot "../logs/shots/$(printf %03d $i).png" >/dev/null 2>&1; sleep 10; done ) &
+          SHOOTER=$!
+          STATUS=0
+          xcodebuild test-without-building -project Encore.xcodeproj -scheme Encore \
+            -destination "platform=iOS Simulator,id=$SIM" -derivedDataPath build/sim \
+            -only-testing:EncoreUITests -resultBundlePath build/UI.xcresult \
+            2>&1 | tee ../logs/ui-full.log | grep -E "error:|Test Case|Executed|\*\* " | tee ../logs/ui.log || STATUS=$?
+          kill $SHOOTER 2>/dev/null || true
+          exit $STATUS
+
+      - name: Test details
+        if: always()
+        working-directory: ios
+        run: |
+          for r in Unit UI; do
+            if [ -d build/$r.xcresult ]; then
+              xcrun xcresulttool get test-results summary --path build/$r.xcresult > ../logs/$r-summary.json 2>&1 || true
+              xcrun xcresulttool get test-results tests --path build/$r.xcresult > ../logs/$r-tests.json 2>&1 || true
+              mkdir -p ../logs/$r-attachments
+              xcrun xcresulttool export attachments --path build/$r.xcresult --output-path ../logs/$r-attachments > /dev/null 2>&1 || true
+            fi
+          done
+          W="${RUNNER_TEMP}/encore-ci"
+          cp "$W/navidrome.log" "$W/nginx-access.log" "$W/nginx-error.log" ../logs/ 2>/dev/null || true
+          xcrun simctl spawn "$SIM" log show --last 20m --style compact --predicate 'process == "Encore" OR eventMessage CONTAINS "Encore:"' > ../logs/sim-app.log 2>&1 || true
+          tail -c 2000000 ../logs/sim-app.log > ../logs/sim-app-tail.log 2>/dev/null || true
+          rm -f ../logs/sim-app.log
+
+      - name: Build the unsigned .ipa
+        if: success()
+        working-directory: ios
+        run: |
+          set -o pipefail
+          xcodebuild -project Encore.xcodeproj -scheme Encore -configuration Release \
+            -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath build/dev \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+            build 2>&1 | tee ../logs/ipa-build-full.log | grep -E "error:|warning: |BUILD|\*\* " | tee ../logs/ipa-build.log
+          APP=build/dev/Build/Products/Release-iphoneos/Encore.app
+          /usr/libexec/PlistBuddy -c Print "$APP/Info.plist" | tee ../logs/ipa-contents.log
+          du -sh "$APP" | tee -a ../logs/ipa-contents.log
+          mkdir -p ../dist/Payload
+          cp -R "$APP" ../dist/Payload/
+          (cd ../dist && zip -qry Encore.ipa Payload)
+          ls -la ../dist/Encore.ipa | tee -a ../logs/ipa-contents.log
+          shasum -a 256 ../dist/Encore.ipa | tee ../dist/Encore.ipa.sha256 | tee -a ../logs/ipa-contents.log
+
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: Encore-ipa
+          path: dist/Encore.ipa
+
+      - name: Publish as the latest release
+        if: success() && github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -o pipefail
+          printf 'Built from commit %s on %s\n' "$GITHUB_SHA" "$(date -u '+%Y-%m-%d %H:%M UTC')" > dist/build-info.txt
+          cp web/dist/encore.html dist/encore.html
+          if gh release view latest >/dev/null 2>&1; then
+            # replace the files in place, so the download links keep working
+            gh release upload latest dist/Encore.ipa dist/Encore.ipa.sha256 dist/encore.html dist/build-info.txt --clobber 2>&1 | tee logs/release.log
+          else
+            gh release create latest dist/Encore.ipa dist/Encore.ipa.sha256 dist/encore.html dist/build-info.txt \
+              --title "Encore (latest build)" --target "$GITHUB_SHA" \
+              --notes "Encore.ipa: the iPhone app, unsigned, for Sideloadly. encore.html: the page for the server. build-info.txt says which commit they're from." 2>&1 | tee logs/release.log
+          fi
+
+      - name: Save logs to the ci-logs-ios branch
+        if: always()
+        run: |
+          cd logs
+          for f in sim-build-full.log unit-full.log ui-full.log ipa-build-full.log; do
+            if [ -f "$f" ]; then gzip -f "$f"; fi
+          done
+          echo "commit ${{ github.sha }} run ${{ github.run_id }} attempt ${{ github.run_attempt }} status ${{ job.status }}" > STATUS
+          git init -q -b logs
+          git config user.name "ci"
+          git config user.email "ci@users.noreply.github.com"
+          git add -A
+          git commit -qm "ios logs for ${{ github.sha }}"
+          git push -qf "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" logs:ci-logs-ios
