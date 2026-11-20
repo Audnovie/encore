@@ -1,0 +1,50 @@
+[
+  {
+    "attachments" : [
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "CDC7077E-2206-4FEC-B03A-52EB15B2CAD4",
+        "deviceName" : "iPhone 17 Pro",
+        "exportedFileName" : "215280F3-8D17-4F4A-BEE0-8CDCB6FF28ED.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "caught-up_0_508FE34D-C450-4D36-BC83-A7EB4CB76D84.png",
+        "timestamp" : 1795187588.282
+      },
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "CDC7077E-2206-4FEC-B03A-52EB15B2CAD4",
+        "deviceName" : "iPhone 17 Pro",
+        "exportedFileName" : "7F8427EB-A029-4803-8B37-3AAF126C0742.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "playing_0_59C7F1AF-EF95-47E7-88AC-7A0ACB1D97E9.png",
+        "timestamp" : 1795187568.263
+      }
+    ],
+    "testIdentifier" : "IntegrationTests/test1PlaysAndMovesOnWhileInTheBackground()",
+    "testIdentifierURL" : "test://com.apple.xcode/Encore/EncoreUITests/IntegrationTests/test1PlaysAndMovesOnWhileInTheBackground"
+  },
+  {
+    "attachments" : [
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "CDC7077E-2206-4FEC-B03A-52EB15B2CAD4",
+        "deviceName" : "iPhone 17 Pro",
+        "exportedFileName" : "B24A68FA-9F64-4754-BE75-4C4D8D8FF901.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "not-encore_0_35B95A9B-BBD1-42E5-B160-3B1571B9E87A.png",
+        "timestamp" : 1795187907.296
+      },
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "CDC7077E-2206-4FEC-B03A-52EB15B2CAD4",
+        "deviceName" : "iPhone 17 Pro",
+        "exportedFileName" : "BE6B706F-7BD4-4DCC-85E3-D32FD8531A1C.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "unreachable_0_01DDFADF-14DB-4B56-AE42-E8C2D88DF669.png",
+        "timestamp" : 1795187894.9
+      }
+    ],
+    "testIdentifier" : "IntegrationTests/test7FirstScreenAndProblems()",
+    "testIdentifierURL" : "test://com.apple.xcode/Encore/EncoreUITests/IntegrationTests/test7FirstScreenAndProblems"
+  }
+]

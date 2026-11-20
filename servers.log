@@ -1,0 +1,18 @@
+== Encore page
+/Users/runner/work/encore/encore/web/dist/encore.html 327820 bytes
+const APP_VERSION = '1.5'
+== test library
+made Encore Test/Short Songs/01 Song 1.mp3
+made Encore Test/Short Songs/02 Song 2.mp3
+made Encore Test/Short Songs/03 Song 3.mp3
+made Encore Test/Long Songs/01 Song 4.mp3
+made Encore Test/Long Songs/02 Song 5.mp3
+made Encore Test/Long Songs/03 Song 6.mp3
+made Encore Test/Other/WMA Song.wma
+made Encore Test/Other/WMA Song 2.wma
+== Navidrome 0.63.2
+songs in Navidrome: 8
+Navidrome idle after 3s
+== nginx
+{"subsonic-response":{"status":"ok","version":"1.16.1","type":"navidrome","serverVersion":"0.63.2 (be10f89c)","openSubsonic":true}}
+Encore page: HTTP 200, 327820 bytes

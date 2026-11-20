@@ -1,0 +1,20 @@
+Test Case '-[EncoreUITests.IntegrationTests test1PlaysAndMovesOnWhileInTheBackground]' started.
+Test Case '-[EncoreUITests.IntegrationTests test1PlaysAndMovesOnWhileInTheBackground]' passed (69.871 seconds).
+Test Case '-[EncoreUITests.IntegrationTests test2LockScreenButtons]' started.
+Test Case '-[EncoreUITests.IntegrationTests test2LockScreenButtons]' passed (65.929 seconds).
+Test Case '-[EncoreUITests.IntegrationTests test3PageAsleepCatchesUp]' started.
+Test Case '-[EncoreUITests.IntegrationTests test3PageAsleepCatchesUp]' passed (52.119 seconds).
+Test Case '-[EncoreUITests.IntegrationTests test4ReopenedAppCatchesUp]' started.
+Test Case '-[EncoreUITests.IntegrationTests test4ReopenedAppCatchesUp]' passed (46.521 seconds).
+Test Case '-[EncoreUITests.IntegrationTests test5FallbackAndSongsThatWontPlay]' started.
+Test Case '-[EncoreUITests.IntegrationTests test5FallbackAndSongsThatWontPlay]' passed (67.641 seconds).
+Test Case '-[EncoreUITests.IntegrationTests test6RepeatOneAndTheEnd]' started.
+Test Case '-[EncoreUITests.IntegrationTests test6RepeatOneAndTheEnd]' passed (58.511 seconds).
+Test Case '-[EncoreUITests.IntegrationTests test7FirstScreenAndProblems]' started.
+Test Case '-[EncoreUITests.IntegrationTests test7FirstScreenAndProblems]' passed (27.470 seconds).
+Test Case '-[EncoreUITests.IntegrationTests test8LowerQuality]' started.
+Test Case '-[EncoreUITests.IntegrationTests test8LowerQuality]' passed (49.528 seconds).
+	 Executed 8 tests, with 0 failures (0 unexpected) in 437.592 (437.602) seconds
+	 Executed 8 tests, with 0 failures (0 unexpected) in 437.592 (437.605) seconds
+	 Executed 8 tests, with 0 failures (0 unexpected) in 437.592 (437.606) seconds
+** TEST EXECUTE SUCCEEDED **

@@ -1,0 +1,445 @@
+{
+  "devices" : [
+    {
+      "architecture" : "arm64",
+      "deviceId" : "CDC7077E-2206-4FEC-B03A-52EB15B2CAD4",
+      "deviceName" : "iPhone 17 Pro",
+      "modelName" : "iPhone 17 Pro",
+      "osBuildNumber" : "23F77",
+      "osVersion" : "26.5",
+      "platform" : "iOS Simulator"
+    }
+  ],
+  "testNodes" : [
+    {
+      "children" : [
+        {
+          "children" : [
+            {
+              "children" : [
+                {
+                  "duration" : "0.0065s",
+                  "durationInSeconds" : 0.006466984748840332,
+                  "name" : "testAddressesAsTyped()",
+                  "nodeIdentifier" : "AddressTests/testAddressesAsTyped()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Encore/EncoreTests/AddressTests/testAddressesAsTyped",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.0011s",
+                  "durationInSeconds" : 0.0011469125747680664,
+                  "name" : "testNotAddresses()",
+                  "nodeIdentifier" : "AddressTests/testNotAddresses()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Encore/EncoreTests/AddressTests/testNotAddresses",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.0015s",
+                  "durationInSeconds" : 0.001538991928100586,
+                  "name" : "testSameSite()",
+                  "nodeIdentifier" : "AddressTests/testSameSite()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Encore/EncoreTests/AddressTests/testSameSite",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                }
+              ],
+              "name" : "AddressTests",
+              "nodeIdentifierURL" : "test://com.apple.xcode/Encore/EncoreTests/AddressTests",
+              "nodeType" : "Test Suite",
+              "result" : "Passed"
+            },
+            {
+              "children" : [
+                {
+                  "duration" : "0.0045s",
+                  "durationInSeconds" : 0.004534006118774414,
+                  "name" : "testDayKeyUsesThePhonesTimeZone()",
+                  "nodeIdentifier" : "EventLogTests/testDayKeyUsesThePhonesTimeZone()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Encore/EncoreTests/EventLogTests/testDayKeyUsesThePhonesTimeZone",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.0041s",
+                  "durationInSeconds" : 0.004084944725036621,
+                  "name" : "testListeningBecomesOneMessage()",
+                  "nodeIdentifier" : "EventLogTests/testListeningBecomesOneMessage()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Encore/EncoreTests/EventLogTests/testListeningBecomesOneMessage",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.00076s",
+                  "durationInSeconds" : 0.0007610321044921875,
+                  "name" : "testMessagesThatArentJSONAreDropped()",
+                  "nodeIdentifier" : "EventLogTests/testMessagesThatArentJSONAreDropped()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Encore/EncoreTests/EventLogTests/testMessagesThatArentJSONAreDropped",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.002s",
+                  "durationInSeconds" : 0.002026081085205078,
+                  "name" : "testNumbersAndConfirming()",
+                  "nodeIdentifier" : "EventLogTests/testNumbersAndConfirming()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Encore/EncoreTests/EventLogTests/testNumbersAndConfirming",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.029s",
+                  "durationInSeconds" : 0.029438018798828125,
+                  "name" : "testOldestDroppedWhenFull()",
+                  "nodeIdentifier" : "EventLogTests/testOldestDroppedWhenFull()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Encore/EncoreTests/EventLogTests/testOldestDroppedWhenFull",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.027s",
+                  "durationInSeconds" : 0.026978015899658203,
+                  "name" : "testSavedAndLoaded()",
+                  "nodeIdentifier" : "EventLogTests/testSavedAndLoaded()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Encore/EncoreTests/EventLogTests/testSavedAndLoaded",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                }
+              ],
+              "name" : "EventLogTests",
+              "nodeIdentifierURL" : "test://com.apple.xcode/Encore/EncoreTests/EventLogTests",
+              "nodeType" : "Test Suite",
+              "result" : "Passed"
+            },
+            {
+              "children" : [
+                {
+                  "duration" : "0.0032s",
+                  "durationInSeconds" : 0.0031599998474121094,
+                  "name" : "testDetailsPassedBackToThePage()",
+                  "nodeIdentifier" : "ItemTests/testDetailsPassedBackToThePage()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Encore/EncoreTests/ItemTests/testDetailsPassedBackToThePage",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.0032s",
+                  "durationInSeconds" : 0.0032449960708618164,
+                  "name" : "testOldSavedItemsStillLoad()",
+                  "nodeIdentifier" : "ItemTests/testOldSavedItemsStillLoad()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Encore/EncoreTests/ItemTests/testOldSavedItemsStillLoad",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.0021s",
+                  "durationInSeconds" : 0.0021430253982543945,
+                  "name" : "testRadio()",
+                  "nodeIdentifier" : "ItemTests/testRadio()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Encore/EncoreTests/ItemTests/testRadio",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.0032s",
+                  "durationInSeconds" : 0.0032110214233398438,
+                  "name" : "testReadsTheHelloFromThePage()",
+                  "nodeIdentifier" : "ItemTests/testReadsTheHelloFromThePage()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Encore/EncoreTests/ItemTests/testReadsTheHelloFromThePage",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.015s",
+                  "durationInSeconds" : 0.014658093452453613,
+                  "name" : "testRejectsWhatItCantPlay()",
+                  "nodeIdentifier" : "ItemTests/testRejectsWhatItCantPlay()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Encore/EncoreTests/ItemTests/testRejectsWhatItCantPlay",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.0011s",
+                  "durationInSeconds" : 0.0010570287704467773,
+                  "name" : "testScrobbleAddress()",
+                  "nodeIdentifier" : "ItemTests/testScrobbleAddress()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Encore/EncoreTests/ItemTests/testScrobbleAddress",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                }
+              ],
+              "name" : "ItemTests",
+              "nodeIdentifierURL" : "test://com.apple.xcode/Encore/EncoreTests/ItemTests",
+              "nodeType" : "Test Suite",
+              "result" : "Passed"
+            },
+            {
+              "children" : [
+                {
+                  "duration" : "4s",
+                  "durationInSeconds" : 4.557589054107666,
+                  "name" : "testAPlayIsntCountedAgainWhenStartingPastHalfway()",
+                  "nodeIdentifier" : "PlayerEngineTests/testAPlayIsntCountedAgainWhenStartingPastHalfway()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Encore/EncoreTests/PlayerEngineTests/testAPlayIsntCountedAgainWhenStartingPastHalfway",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "2s",
+                  "durationInSeconds" : 2.3713330030441284,
+                  "name" : "testASongThatWontLoadWhilePausedIsLeftAlone()",
+                  "nodeIdentifier" : "PlayerEngineTests/testASongThatWontLoadWhilePausedIsLeftAlone()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Encore/EncoreTests/PlayerEngineTests/testASongThatWontLoadWhilePausedIsLeftAlone",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.66s",
+                  "durationInSeconds" : 0.6556000709533691,
+                  "name" : "testCantReachTheServerStopsInsteadOfSkipping()",
+                  "nodeIdentifier" : "PlayerEngineTests/testCantReachTheServerStopsInsteadOfSkipping()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Encore/EncoreTests/PlayerEngineTests/testCantReachTheServerStopsInsteadOfSkipping",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.87s",
+                  "durationInSeconds" : 0.8738210201263428,
+                  "name" : "testFallsBackToTheMP3VersionThenSkipsWhatWontPlay()",
+                  "nodeIdentifier" : "PlayerEngineTests/testFallsBackToTheMP3VersionThenSkipsWhatWontPlay()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Encore/EncoreTests/PlayerEngineTests/testFallsBackToTheMP3VersionThenSkipsWhatWontPlay",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "2s",
+                  "durationInSeconds" : 2.8309600353240967,
+                  "name" : "testKeepsItsPlaceForTheNextLaunch()",
+                  "nodeIdentifier" : "PlayerEngineTests/testKeepsItsPlaceForTheNextLaunch()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Encore/EncoreTests/PlayerEngineTests/testKeepsItsPlaceForTheNextLaunch",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "5s",
+                  "durationInSeconds" : 5.125624060630798,
+                  "name" : "testLockScreenNextAndBack()",
+                  "nodeIdentifier" : "PlayerEngineTests/testLockScreenNextAndBack()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Encore/EncoreTests/PlayerEngineTests/testLockScreenNextAndBack",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "4s",
+                  "durationInSeconds" : 4.738729953765869,
+                  "name" : "testMovesOnByItselfAndRegistersPlays()",
+                  "nodeIdentifier" : "PlayerEngineTests/testMovesOnByItselfAndRegistersPlays()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Encore/EncoreTests/PlayerEngineTests/testMovesOnByItselfAndRegistersPlays",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.4s",
+                  "durationInSeconds" : 0.40365493297576904,
+                  "name" : "testNowPlayingOnTheLockScreen()",
+                  "nodeIdentifier" : "PlayerEngineTests/testNowPlayingOnTheLockScreen()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Encore/EncoreTests/PlayerEngineTests/testNowPlayingOnTheLockScreen",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "1s",
+                  "durationInSeconds" : 1.4678840637207031,
+                  "name" : "testPlayAfterTheConnectionBrokeMidSongStartsItAgain()",
+                  "nodeIdentifier" : "PlayerEngineTests/testPlayAfterTheConnectionBrokeMidSongStartsItAgain()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Encore/EncoreTests/PlayerEngineTests/testPlayAfterTheConnectionBrokeMidSongStartsItAgain",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.0063s",
+                  "durationInSeconds" : 0.006255030632019043,
+                  "name" : "testRecognisesConnectionProblems()",
+                  "nodeIdentifier" : "PlayerEngineTests/testRecognisesConnectionProblems()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Encore/EncoreTests/PlayerEngineTests/testRecognisesConnectionProblems",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "4s",
+                  "durationInSeconds" : 4.088426947593689,
+                  "name" : "testRepeatOneStartsTheSongAgain()",
+                  "nodeIdentifier" : "PlayerEngineTests/testRepeatOneStartsTheSongAgain()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Encore/EncoreTests/PlayerEngineTests/testRepeatOneStartsTheSongAgain",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.46s",
+                  "durationInSeconds" : 0.4621720314025879,
+                  "name" : "testRestoreDoesntReplaceThePlayingSong()",
+                  "nodeIdentifier" : "PlayerEngineTests/testRestoreDoesntReplaceThePlayingSong()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Encore/EncoreTests/PlayerEngineTests/testRestoreDoesntReplaceThePlayingSong",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.12s",
+                  "durationInSeconds" : 0.1154700517654419,
+                  "name" : "testRestoreLoadsPausedWhereItWas()",
+                  "nodeIdentifier" : "PlayerEngineTests/testRestoreLoadsPausedWhereItWas()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Encore/EncoreTests/PlayerEngineTests/testRestoreLoadsPausedWhereItWas",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.53s",
+                  "durationInSeconds" : 0.529338002204895,
+                  "name" : "testSnapshotSaysWhoChoseTheSong()",
+                  "nodeIdentifier" : "PlayerEngineTests/testSnapshotSaysWhoChoseTheSong()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Encore/EncoreTests/PlayerEngineTests/testSnapshotSaysWhoChoseTheSong",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.37s",
+                  "durationInSeconds" : 0.3672819137573242,
+                  "name" : "testStopClearsEverything()",
+                  "nodeIdentifier" : "PlayerEngineTests/testStopClearsEverything()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Encore/EncoreTests/PlayerEngineTests/testStopClearsEverything",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.79s",
+                  "durationInSeconds" : 0.7927190065383911,
+                  "name" : "testTheMP3VersionIsTriedOnceMoreWhenItsConnectionBreaks()",
+                  "nodeIdentifier" : "PlayerEngineTests/testTheMP3VersionIsTriedOnceMoreWhenItsConnectionBreaks()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Encore/EncoreTests/PlayerEngineTests/testTheMP3VersionIsTriedOnceMoreWhenItsConnectionBreaks",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "1s",
+                  "durationInSeconds" : 1.8733240365982056,
+                  "name" : "testTheNextSongPlaysAsMP3WhenItsOriginalWontPlay()",
+                  "nodeIdentifier" : "PlayerEngineTests/testTheNextSongPlaysAsMP3WhenItsOriginalWontPlay()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Encore/EncoreTests/PlayerEngineTests/testTheNextSongPlaysAsMP3WhenItsOriginalWontPlay",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                }
+              ],
+              "name" : "PlayerEngineTests",
+              "nodeIdentifierURL" : "test://com.apple.xcode/Encore/EncoreTests/PlayerEngineTests",
+              "nodeType" : "Test Suite",
+              "result" : "Passed"
+            },
+            {
+              "children" : [
+                {
+                  "duration" : "0.00099s",
+                  "durationInSeconds" : 0.000989079475402832,
+                  "name" : "testARequestTheAppCouldntTakeStillCounts()",
+                  "nodeIdentifier" : "QueueStateTests/testARequestTheAppCouldntTakeStillCounts()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Encore/EncoreTests/QueueStateTests/testARequestTheAppCouldntTakeStillCounts",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.0016s",
+                  "durationInSeconds" : 0.001611948013305664,
+                  "name" : "testBackListIsLimited()",
+                  "nodeIdentifier" : "QueueStateTests/testBackListIsLimited()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Encore/EncoreTests/QueueStateTests/testBackListIsLimited",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.0026s",
+                  "durationInSeconds" : 0.002599954605102539,
+                  "name" : "testBackNeverGoesToAStation()",
+                  "nodeIdentifier" : "QueueStateTests/testBackNeverGoesToAStation()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Encore/EncoreTests/QueueStateTests/testBackNeverGoesToAStation",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.0021s",
+                  "durationInSeconds" : 0.002113938331604004,
+                  "name" : "testComingSongsOnlyForTheSongTheAppIsOn()",
+                  "nodeIdentifier" : "QueueStateTests/testComingSongsOnlyForTheSongTheAppIsOn()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Encore/EncoreTests/QueueStateTests/testComingSongsOnlyForTheSongTheAppIsOn",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.0012s",
+                  "durationInSeconds" : 0.0011709928512573242,
+                  "name" : "testLoadTakesTheSongAndForgetsTheOldComingSongs()",
+                  "nodeIdentifier" : "QueueStateTests/testLoadTakesTheSongAndForgetsTheOldComingSongs()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Encore/EncoreTests/QueueStateTests/testLoadTakesTheSongAndForgetsTheOldComingSongs",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.0012s",
+                  "durationInSeconds" : 0.0011969804763793945,
+                  "name" : "testMovingOnAndBack()",
+                  "nodeIdentifier" : "QueueStateTests/testMovingOnAndBack()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Encore/EncoreTests/QueueStateTests/testMovingOnAndBack",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.00077s",
+                  "durationInSeconds" : 0.0007730722427368164,
+                  "name" : "testRequestNumbersCanStartOverAfterThePageReloads()",
+                  "nodeIdentifier" : "QueueStateTests/testRequestNumbersCanStartOverAfterThePageReloads()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Encore/EncoreTests/QueueStateTests/testRequestNumbersCanStartOverAfterThePageReloads",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.00097s",
+                  "durationInSeconds" : 0.0009679794311523438,
+                  "name" : "testRestoreIsOnlyTakenWhenNothingIsPlaying()",
+                  "nodeIdentifier" : "QueueStateTests/testRestoreIsOnlyTakenWhenNothingIsPlaying()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Encore/EncoreTests/QueueStateTests/testRestoreIsOnlyTakenWhenNothingIsPlaying",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0.0015s",
+                  "durationInSeconds" : 0.0014729499816894531,
+                  "name" : "testStopKeepsTheRequestNumber()",
+                  "nodeIdentifier" : "QueueStateTests/testStopKeepsTheRequestNumber()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Encore/EncoreTests/QueueStateTests/testStopKeepsTheRequestNumber",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                }
+              ],
+              "name" : "QueueStateTests",
+              "nodeIdentifierURL" : "test://com.apple.xcode/Encore/EncoreTests/QueueStateTests",
+              "nodeType" : "Test Suite",
+              "result" : "Passed"
+            }
+          ],
+          "name" : "EncoreTests",
+          "nodeIdentifierURL" : "test://com.apple.xcode/Encore/EncoreTests",
+          "nodeType" : "Unit test bundle",
+          "result" : "Passed"
+        }
+      ],
+      "name" : "Encore",
+      "nodeType" : "Test Plan",
+      "result" : "Passed"
+    }
+  ],
+  "testPlanConfigurations" : [
+    {
+      "configurationId" : "1",
+      "configurationName" : "Test Scheme Action"
+    }
+  ]
+}
