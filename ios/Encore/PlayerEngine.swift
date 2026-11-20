@@ -21,6 +21,8 @@ final class Entry {
     var didEnd = false
     /// its failure has been dealt with (several signals can report the same one)
     var failureHandled = false
+    /// put last in the queue because the player had already let go of the song before it (see failed)
+    var insertedLast = false
     var statusWatch: NSKeyValueObservation?
 
     init(item: Item, fallback: Bool = false) {
@@ -422,20 +424,23 @@ final class PlayerEngine: NSObject {
         guard let cur = current, let pre = preload,
               player.currentItem === pre.playerItem, player.currentItem !== cur.playerItem else { return }
         if !cur.didEnd && (cur.failureHandled || cur.playerItem.status == .failed) {
-            // it moved on because the song failed, not because it ended (a connection lost part way is
-            // reported while the song still counts as ready): failed() decides. A failure already dealt with
-            // stays where it is, and Play starts the song again from a fresh copy.
+            // it moved on because the song failed, not because it ended: failed() decides. A failure already
+            // dealt with stays where it is, and Play starts the song again from a fresh copy.
             failed(cur, cur.playerItem.error)
             return
         }
+        // Only once the song has really ended: ended() marks it and calls this again. The player can also move
+        // on when a song breaks off part way (a lost connection is reported while the song still counts as
+        // ready), and that news (itemBroke) may come after this.
+        guard cur.didEnd else { return }
         let from = cur.item
         guard let next = queue.move(.ended) else { return }
         preload = nil
         if next == pre.item {
             current = pre
-            // normally it's playing already; after the lined-up song was swapped for its MP3 version just as
-            // the last one ended, it may need starting
-            if wantsPlay && player.rate == 0 {
+            // normally it's playing already; when the lined-up song was swapped for its MP3 version just as the
+            // last one ended (put last in an empty queue), it may need starting
+            if pre.insertedLast && wantsPlay && player.rate == 0 {
                 activateSession()
                 player.play()
             }
@@ -597,6 +602,7 @@ final class PlayerEngine: NSObject {
                 let after: AVPlayerItem? = player.items().contains(cur.playerItem) ? cur.playerItem : nil
                 if player.canInsert(f.playerItem, after: after) {
                     player.insert(f.playerItem, after: after)
+                    f.insertedLast = after == nil
                     preload = f
                 }
             }
