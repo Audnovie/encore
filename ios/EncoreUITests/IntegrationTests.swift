@@ -265,8 +265,19 @@ final class IntegrationTests: XCTestCase {
             let n = native()
             return n["key"] as? String == wma && n["fallback"] as? Bool == true && (n["t"] as? Double ?? 0) > 0.5
         }
+        // ...to its end (6 s), then on to Song 2 by itself, with nothing reported (Navidrome's freshly made MP3
+        // comes with a slightly wrong length; the app tries it once more instead of giving up)
+        waitFor(25, "the WMA song played to its end, then Song 2") {
+            let n = native()
+            return n["key"] as? String == s2 && (n["t"] as? Double ?? 0) > 0.3
+        }
+        XCTAssertEqual(native()["lastError"] as? String, "", "no error reported for the WMA song")
+        // Song 2 is already playing, so the skip is told apart by the error reported for the missing song
         js("__t.playIds(['no-such-song', '\(s2)'])")
-        waitFor(25, "a song that won't play is skipped") { native()["key"] as? String == s2 && (native()["t"] as? Double ?? 0) > 0.3 }
+        waitFor(25, "a song that won't play is reported and skipped") {
+            let n = native()
+            return n["lastError"] as? String == "unplayable" && n["key"] as? String == s2 && (n["t"] as? Double ?? 0) > 0.3
+        }
         waitFor(10, "the page followed") { page()["cur"] as? String == s2 }
     }
 

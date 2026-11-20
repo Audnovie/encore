@@ -23,6 +23,8 @@ final class Entry {
     var failureHandled = false
     /// put last in the queue because the player had already let go of the song before it (see failed)
     var insertedLast = false
+    /// the MP3 version, tried a second time after its connection broke (see failed)
+    var retriedFallback = false
     var statusWatch: NSKeyValueObservation?
 
     init(item: Item, fallback: Bool = false) {
@@ -65,6 +67,8 @@ final class PlayerEngine: NSObject {
     private var lastSaved: CFTimeInterval = 0
     /// the page's last request when the app couldn't play it (see rejectLoad)
     private var rejectedKey = ""
+    /// the reason given with the last error reported to the page (for the test panel)
+    private(set) var lastErrorReason = ""
 
 
     override init() {
@@ -146,7 +150,7 @@ final class PlayerEngine: NSObject {
         stop()
         queue.note(req: req)
         rejectedKey = key
-        record(["type": "error", "key": key, "message": "This can’t be played in the app.", "reason": "unsupported"])
+        reportError(key, "This can’t be played in the app.", reason: "unsupported")
         send(["type": "state", "key": key, "req": req, "playing": false, "waiting": false])
     }
 
@@ -594,11 +598,14 @@ final class PlayerEngine: NSObject {
 
     private func failed(_ e: Entry, _ error: Error?) {
         if e === preload {
-            // the lined-up song can't be played: line up its MP3 version instead (if there's none, the move
-            // to it fails when the current song ends, and is handled then)
+            // the lined-up song can't be played: line up its MP3 version instead, or the MP3 version once more
+            // after its connection broke (see below). Otherwise the move to it fails when the current song
+            // ends, and is handled then.
             clearPreload()
-            if !e.usingFallback, e.item.fallback != nil, let cur = current {
+            let retry = e.usingFallback && !e.retriedFallback && PlayerEngine.isNetworkError(error)
+            if !e.usingFallback || retry, e.item.fallback != nil, let cur = current {
                 let f = Entry(item: e.item, fallback: true)
+                f.retriedFallback = retry
                 watch(f)
                 // after the current song, or last if AVQueuePlayer has already let go of it (it just ended)
                 let after: AVPlayerItem? = player.items().contains(cur.playerItem) ? cur.playerItem : nil
@@ -619,11 +626,20 @@ final class PlayerEngine: NSObject {
             sendState()
             return
         }
+        if e.usingFallback && !e.retriedFallback && PlayerEngine.isNetworkError(error) {
+            // Navidrome sends a freshly made MP3 version with a length it estimates a little too high (or, to a
+            // second request, with its real length), which AVFoundation reports as a lost connection. By then
+            // the server has the finished MP3 kept, with its exact length: try once more from where it was.
+            put(e.item, fallback: true, at: currentTime(), play: true)
+            current?.retriedFallback = true
+            fillPreload()
+            return
+        }
         if PlayerEngine.isNetworkError(error) {
             // the server can't be reached: stop here instead of skipping through the list; Play tries again
             wantsPlay = false
             player.pause()
-            record(["type": "error", "key": e.item.key, "message": "Couldn’t reach the music server.", "reason": "network"])
+            reportError(e.item.key, "Couldn’t reach the music server.", reason: "network")
             sendState()
             nowPlaying()
             saveState()
@@ -636,8 +652,7 @@ final class PlayerEngine: NSObject {
             fillPreload()
             return
         }
-        record(["type": "error", "key": e.item.key, "message": error?.localizedDescription ?? "The song couldn’t be played.",
-                "reason": "unplayable"])
+        reportError(e.item.key, error?.localizedDescription ?? "The song couldn’t be played.", reason: "unplayable")
         if e.item.isRadio {
             wantsPlay = false
             player.pause()
@@ -732,6 +747,11 @@ final class PlayerEngine: NSObject {
     // MARK: - telling the page
 
     private func send(_ m: [String: Any]) { link?.send(m) }
+
+    private func reportError(_ key: String, _ message: String, reason: String) {
+        lastErrorReason = reason
+        record(["type": "error", "key": key, "message": message, "reason": reason])
+    }
 
     private func record(_ m: [String: Any]) {
         var m = m
@@ -872,6 +892,7 @@ final class PlayerEngine: NSObject {
             "fallback": current?.usingFallback ?? false,
             "preload": preload?.item.key ?? "",
             "errors": errorsInARow,
+            "lastError": lastErrorReason,
             "own": current != nil && !currentFromPage,
             "scrobbles": scrobbleLog.filter { $0.submission && $0.ok }.count,
             "nowPlaying": MPNowPlayingInfoCenter.default().nowPlayingInfo?[MPMediaItemPropertyTitle] as? String ?? "",

@@ -174,6 +174,30 @@ final class PlayerEngineTests: XCTestCase {
         XCTAssertTrue(page.errors.isEmpty, "the MP3 version played, so nothing to report")
     }
 
+    func testTheMP3VersionIsTriedOnceMoreWhenItsConnectionBreaks() throws {
+        // Navidrome's freshly made MP3 version comes with a slightly wrong length, which AVFoundation reports as
+        // a lost connection: the app tries the MP3 version once more before saying the server can't be reached
+        let broken = dir.appendingPathComponent("broken4.wav")
+        try Data("not audio at all".utf8).write(to: broken)
+        let x = song("x", broken, seconds: 8, fallback: try tone("x-mp3", seconds: 8))
+        engine.load(x, req: 1, startAt: 0, autoplay: true, restore: false)
+        waitForSound()
+        XCTAssertEqual(engine.current?.usingFallback, true)
+        let lost = NSError(domain: NSURLErrorDomain, code: NSURLErrorNetworkConnectionLost)
+        let first = engine.current?.playerItem
+        NotificationCenter.default.post(name: .AVPlayerItemFailedToPlayToEndTime, object: first,
+                                        userInfo: [AVPlayerItemFailedToPlayToEndTimeErrorKey: lost])
+        waitUntil(3, "the MP3 version tried again") { engine.current != nil && engine.current?.playerItem !== first }
+        XCTAssertEqual(engine.current?.usingFallback, true)
+        XCTAssertTrue(page.errors.isEmpty, "nothing to report yet")
+        waitForSound()
+        // a second break: the server really can't be reached
+        NotificationCenter.default.post(name: .AVPlayerItemFailedToPlayToEndTime, object: engine.current?.playerItem,
+                                        userInfo: [AVPlayerItemFailedToPlayToEndTimeErrorKey: lost])
+        waitUntil(3, "stopped with a message") { !engine.wantsPlay && page.errors == ["x"] }
+        XCTAssertEqual(page.recorded.last { $0["type"] as? String == "error" }?["reason"] as? String, "network")
+    }
+
     func testASongThatWontLoadWhilePausedIsLeftAlone() throws {
         let broken = dir.appendingPathComponent("broken2.wav")
         try Data("not audio either".utf8).write(to: broken)
