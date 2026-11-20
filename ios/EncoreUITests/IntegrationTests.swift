@@ -274,7 +274,10 @@ final class IntegrationTests: XCTestCase {
         }
         XCTAssertEqual(native()["lastError"] as? String, "", "no error reported for the WMA song")
         XCTAssertEqual(native()["stallEnds"] as? Int, 0, "it really ended: AVPlayer had the finished MP3, exact length")
-        // next in the list: its MP3 version is made and lined up while Song 1 plays, then straight on
+        // next in the list: its MP3 version is made and lined up while Song 1 plays, then straight on (not
+        // switched over once it's playing: the count of those stays as it is)
+        let switches = native()["mp3Switches"] as? Int ?? -1
+        XCTAssertEqual(switches, 1, "the first WMA song was switched to MP3 as it started")
         js("__t.playIds(['\(s1)', '\(wma2)', '\(s2)'])")
         waitFor(30, "Song 1, then WMA Song 2 as MP3") {
             let n = native()
@@ -286,6 +289,7 @@ final class IntegrationTests: XCTestCase {
         }
         XCTAssertEqual(native()["lastError"] as? String, "")
         XCTAssertEqual(native()["stallEnds"] as? Int, 0)
+        XCTAssertEqual(native()["mp3Switches"] as? Int, switches, "WMA Song 2 was lined up as MP3, not switched while playing")
         // Song 2 is already playing, so the skip is told apart by the error reported for the missing song
         js("__t.playIds(['no-such-song', '\(s2)'])")
         waitFor(25, "a song that won't play is reported and skipped") {
@@ -357,7 +361,8 @@ final class IntegrationTests: XCTestCase {
         }
         let n = native()
         XCTAssertEqual(n["lastError"] as? String, "", "nothing reported")
-        XCTAssertLessThanOrEqual(n["stallEnds"] as? Int ?? 9, 1, "only the first song could have waited at its end")
+        XCTAssertLessThanOrEqual((n["stallEnds"] as? Int ?? 9) + (n["retries"] as? Int ?? 9), 1,
+                                 "only the first song (not made in advance) could have waited at its end or broken off")
     }
 }
 

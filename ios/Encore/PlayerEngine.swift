@@ -75,8 +75,11 @@ final class PlayerEngine: NSObject {
     private var mp3Keys = Set<String>()
     /// gets Navidrome's MP3 versions made before AVPlayer asks for them
     let warmer = TranscodeWarmer()
-    /// songs counted as ended because they stuck just before the end (for the test panel)
+    /// for the test panel: songs counted as ended because they stuck just before the end, second tries after a
+    /// broken connection, and switches of the playing song to its MP3 version
     private(set) var stallEnds = 0
+    private(set) var retriesDone = 0
+    private(set) var mp3Switches = 0
 
 
     override init() {
@@ -496,9 +499,12 @@ final class PlayerEngine: NSObject {
     private func linePreload(_ item: Item, fallback: Bool, retried: Bool, after cur: Entry, orLast: Bool) {
         let url = fallback ? (item.fallback ?? item.url) : item.url
         if TranscodeWarmer.isTranscode(url) && !warmer.isSettled(url) {
-            warmer.warm(url, within: 90) { [weak self] in
-                guard let self = self, self.current === cur, self.preload == nil, !cur.didEnd,
-                      self.queue.ahead.first == item else { return }
+            let stillWanted: () -> Bool = { [weak self] in
+                guard let self = self else { return false }
+                return self.current === cur && self.preload == nil && !cur.didEnd && self.queue.ahead.first == item
+            }
+            warmer.warm(url, within: 60, wanted: stillWanted) { [weak self] in
+                guard let self = self, stillWanted() else { return }
                 self.linePreload(item, fallback: fallback, retried: retried, after: cur, orLast: orLast)
             }
             return
@@ -636,6 +642,7 @@ final class PlayerEngine: NSObject {
             // (not the MP3 version after a broken connection: it's on the same server)
             let toMP3 = !network && !e.usingFallback && e.item.fallback != nil
             if toMP3 { mp3Keys.insert(e.item.key) }
+            if retry { retriesDone += 1 }
             if retry || toMP3, let cur = current {
                 // after the current song, or last if AVQueuePlayer has already let go of it (it just ended)
                 linePreload(e.item, fallback: retry ? e.usingFallback : true, retried: retry, after: cur, orLast: true)
@@ -657,6 +664,7 @@ final class PlayerEngine: NSObject {
             // fallback, or every song with a lower quality chosen) with a length it estimates a little too high
             // (or, to a second request, with its real length), which AVFoundation also reports as a lost
             // connection. By then the server has the finished MP3 kept, with its exact length.
+            retriesDone += 1
             put(e.item, fallback: e.usingFallback, at: e.item.isRadio ? 0 : currentTime(), play: true)
             current?.retried = true
             fillPreload()
@@ -700,8 +708,13 @@ final class PlayerEngine: NSObject {
     /// the finished file with its exact length rather than one being made (see TranscodeWarmer).
     private func startMP3Version(_ e: Entry, at t: Double) {
         guard let f = e.item.fallback else { return }
+        mp3Switches += 1
+        let stillWanted: () -> Bool = { [weak self] in
+            guard let self = self else { return false }
+            return self.current === e && self.wantsPlay
+        }
         let go: () -> Void = { [weak self] in
-            guard let self = self, self.current === e, self.wantsPlay else { return }
+            guard let self = self, stillWanted() else { return }
             self.put(e.item, fallback: true, at: t, play: true)
             self.fillPreload()
         }
@@ -711,7 +724,7 @@ final class PlayerEngine: NSObject {
         }
         // nothing is playing meanwhile: ask iOS for the time, in case the phone is locked
         let time = BackgroundTime.begin("Encore: MP3 version")
-        warmer.warm(f, within: 15) {
+        warmer.warm(f, within: 15, wanted: stillWanted) {
             go()
             time.end()
         }
@@ -985,6 +998,9 @@ final class PlayerEngine: NSObject {
             "errors": errorsInARow,
             "lastError": lastErrorReason,
             "stallEnds": stallEnds,
+            "retries": retriesDone,
+            "mp3Switches": mp3Switches,
+            "preloadMP3": preload?.usingFallback ?? false,
             "own": current != nil && !currentFromPage,
             "scrobbles": scrobbleLog.filter { $0.submission && $0.ok }.count,
             "nowPlaying": MPNowPlayingInfoCenter.default().nowPlayingInfo?[MPMediaItemPropertyTitle] as? String ?? "",
@@ -1063,8 +1079,15 @@ final class ArtworkCache {
 /// connection. A HEAD request makes Navidrome make it in the background; once it's finished and kept, the
 /// server answers with `Accept-Ranges: bytes` and the exact length (core/stream/media_streamer.go).
 final class TranscodeWarmer {
+    private struct Waiter {
+        let wanted: () -> Bool
+        let done: () -> Void
+    }
     private var settled = Set<URL>()
-    private var waiting: [URL: [() -> Void]] = [:]
+    private var waiting: [URL: [Waiter]] = [:]
+    /// A long warm-up (a minute) ran out of time: the server doesn't keep its transcodes (cache turned off, or
+    /// not Navidrome), so transcodes go to AVPlayer as they are for the rest of the session, without asking.
+    private(set) var isOff = false
 
     static func isTranscode(_ url: URL) -> Bool {
         guard let items = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems,
@@ -1073,33 +1096,56 @@ final class TranscodeWarmer {
     }
 
     /// ready on the server, or given up on (then AVPlayer gets it as it is)
-    func isSettled(_ url: URL) -> Bool { settled.contains(url) }
+    func isSettled(_ url: URL) -> Bool { isOff || settled.contains(url) }
 
     /// Calls `done` on the main queue once the server has it finished and kept, or after `within` seconds.
-    func warm(_ url: URL, within: TimeInterval, done: @escaping () -> Void) {
-        if settled.contains(url) {
+    /// Stops asking (without calling `done`) once no caller still `wanted` it.
+    func warm(_ url: URL, within: TimeInterval, wanted: @escaping () -> Bool, done: @escaping () -> Void) {
+        if isSettled(url) {
             done()
             return
         }
+        let w = Waiter(wanted: wanted, done: done)
         if waiting[url] != nil {
-            waiting[url]?.append(done)
+            waiting[url]?.append(w)
             return
         }
-        waiting[url] = [done]
-        ask(url, until: Date().addingTimeInterval(within))
+        waiting[url] = [w]
+        ask(url, attempt: 0, until: Date().addingTimeInterval(within), judging: within >= 60, answered: false)
     }
 
-    private func ask(_ url: URL, until deadline: Date) {
+    /// `judging`: running out of time means the server doesn't keep transcodes (a short wait, for the song
+    /// that's meant to be playing, can run out on a long song that's still being made). `answered`: the server
+    /// did answer (no answer at all says nothing about its transcodes).
+    private func ask(_ url: URL, attempt: Int, until deadline: Date, judging: Bool, answered: Bool) {
         var req = URLRequest(url: url, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 10)
         req.httpMethod = "HEAD"
         URLSession.shared.dataTask(with: req) { [weak self] _, response, _ in
-            let ranges = (response as? HTTPURLResponse)?.value(forHTTPHeaderField: "Accept-Ranges")?.lowercased()
+            let http = response as? HTTPURLResponse
+            let ranges = http?.value(forHTTPHeaderField: "Accept-Ranges")?.lowercased()
             DispatchQueue.main.async {
                 guard let self = self else { return }
-                if ranges == "bytes" || Date() >= deadline {
+                if ranges == "bytes" {
                     self.finish(url)
-                } else {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in self?.ask(url, until: deadline) }
+                    return
+                }
+                // nobody waits for it any more (the list changed, the song moved on): stop asking
+                let still = (self.waiting[url] ?? []).filter { $0.wanted() }
+                guard !still.isEmpty else {
+                    self.waiting[url] = nil
+                    return
+                }
+                self.waiting[url] = still
+                let answeredNow = answered || http != nil
+                if Date() >= deadline {
+                    if judging && answeredNow { self.isOff = true }
+                    self.finish(url)
+                    return
+                }
+                // 0.5 s, 1 s, 2 s, then every 4 s: a long song takes the server a while
+                let pause = [0.5, 1, 2][min(attempt, 2)] + (attempt > 2 ? 2 : 0)
+                DispatchQueue.main.asyncAfter(deadline: .now() + pause) { [weak self] in
+                    self?.ask(url, attempt: attempt + 1, until: deadline, judging: judging, answered: answeredNow)
                 }
             }
         }.resume()
@@ -1109,7 +1155,7 @@ final class TranscodeWarmer {
         if settled.count > 500 { settled.removeAll() }
         settled.insert(url)
         let done = waiting.removeValue(forKey: url) ?? []
-        done.forEach { $0() }
+        done.forEach { $0.done() }
     }
 }
 
@@ -1128,4 +1174,7 @@ final class BackgroundTime {
         UIApplication.shared.endBackgroundTask(id)
         id = .invalid
     }
+
+    /// (also when the work holding it is dropped without finishing: iOS ends an app that keeps the time)
+    deinit { end() }
 }
