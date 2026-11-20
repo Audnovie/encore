@@ -51,10 +51,11 @@ request is ignored.
 
 `.github/workflows/ios.yml`, on GitHub's Mac runners:
 
-1. starts Navidrome (with a test library of tone-only songs) and nginx serving this commit's page
-2. builds the app and runs the unit tests, then the app tests against Navidrome in the simulator (playing,
-   moving on in the background, lock screen buttons, catching up after sleeping or being closed, songs that
-   need the MP3 fallback or won't play, repeat one)
-3. builds the unsigned `Encore.ipa` and publishes it, with `encore.html`, as the `latest` release
+1. builds the app and runs the unit tests (the real player with tone files, the queue, the news log)
+2. starts Navidrome (with a test library of tone-only songs) and nginx serving this commit's page, then runs
+   the app tests against them in the simulator (playing, moving on in the background, lock screen buttons,
+   catching up after sleeping or being closed, songs that need the MP3 fallback or won't play, repeat one)
+3. builds the unsigned `Encore.ipa` and, when every test passed, publishes it with `encore.html` as the
+   `latest` release
 
 Logs and screenshots of each run go to the `ci-logs-ios` branch.

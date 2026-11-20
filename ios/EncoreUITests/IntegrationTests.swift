@@ -31,15 +31,15 @@ final class IntegrationTests: XCTestCase {
     static func reachable(_ s: String) -> Bool {
         guard let url = URL(string: s) else { return false }
         let done = DispatchSemaphore(value: 0)
-        var ok = false
+        let ok = Box(false)
         var req = URLRequest(url: url)
         req.timeoutInterval = 5
         URLSession.shared.dataTask(with: req) { _, r, _ in
-            ok = (r as? HTTPURLResponse)?.statusCode == 200
+            ok.value = (r as? HTTPURLResponse)?.statusCode == 200
             done.signal()
         }.resume()
         _ = done.wait(timeout: .now() + 6)
-        return ok
+        return ok.value
     }
 
     /// A Subsonic call to Navidrome from the test itself.
@@ -48,15 +48,15 @@ final class IntegrationTests: XCTestCase {
         c.queryItems = ["u": user, "p": password, "v": "1.16.1", "c": "uitest", "f": "json"].merging(params) { $1 }
             .map { URLQueryItem(name: $0.key, value: $0.value) }
         let done = DispatchSemaphore(value: 0)
-        var out: [String: Any] = [:]
+        let out = Box<[String: Any]>([:])
         URLSession.shared.dataTask(with: c.url!) { data, _, _ in
             if let data = data, let o = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] {
-                out = o["subsonic-response"] as? [String: Any] ?? [:]
+                out.value = o["subsonic-response"] as? [String: Any] ?? [:]
             }
             done.signal()
         }.resume()
         _ = done.wait(timeout: .now() + 10)
-        return out
+        return out.value
     }
 
     static func playCount(_ id: String) -> Int {
@@ -283,4 +283,10 @@ final class IntegrationTests: XCTestCase {
         })
         shot("not-encore")
     }
+}
+
+/// A value filled in by a network callback (the closure can't change a local variable of the caller).
+private final class Box<T> {
+    var value: T
+    init(_ value: T) { self.value = value }
 }
