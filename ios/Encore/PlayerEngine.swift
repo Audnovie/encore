@@ -165,8 +165,9 @@ final class PlayerEngine: NSObject {
         }
         wantsPlay = true
         activateSession()
-        if cur.playerItem.status == .failed || cur.failureHandled || cur.didEnd {
-            // a song that wouldn't load (or the last one, after it ended): try it again
+        if cur.playerItem.status == .failed || cur.failureHandled || cur.didEnd || player.currentItem !== cur.playerItem {
+            // a song that wouldn't load, the last one after it ended, or the player moved off it after a failure:
+            // start it again from a fresh copy
             put(cur.item, fallback: cur.usingFallback, at: cur.didEnd ? 0 : currentTime(), play: true)
             fillPreload()
         } else {
@@ -390,11 +391,12 @@ final class PlayerEngine: NSObject {
         let from = cur.item
         guard let next = queue.move(m) else { return false }
         let play = (m == .next || m == .prev) ? true : wantsPlay
-        // The lined-up song is only used when moving on from a song that played. After a failure, AVQueuePlayer
-        // can sit "waiting" forever on the song it had lined up, so that one starts afresh instead (put).
-        let healthy = m != .skip && !cur.failureHandled && cur.playerItem.status != .failed
+        // The lined-up song is only used when moving on from a song that played. After a failure (skipping
+        // included), AVQueuePlayer can sit "waiting" forever on the song it had lined up, so the next song
+        // starts afresh instead (put).
+        let healthy = !cur.failureHandled && cur.playerItem.status != .failed
         if m != .prev, healthy, let pre = preload, pre.item == next, player.items().contains(pre.playerItem) {
-            // the song is already lined up in the player (and may already be playing, after a failure)
+            // the song is already lined up in the player (AVQueuePlayer may already have moved on to it)
             preload = nil
             current = pre
             if player.currentItem !== pre.playerItem { player.advanceToNextItem() }
@@ -419,8 +421,10 @@ final class PlayerEngine: NSObject {
     private func followPlayer() {
         guard let cur = current, let pre = preload,
               player.currentItem === pre.playerItem, player.currentItem !== cur.playerItem else { return }
-        if cur.playerItem.status == .failed && !cur.didEnd {
-            // it moved on because the song failed, not because it ended
+        if !cur.didEnd && (cur.failureHandled || cur.playerItem.status == .failed) {
+            // it moved on because the song failed, not because it ended (a connection lost part way is
+            // reported while the song still counts as ready): failed() decides. A failure already dealt with
+            // stays where it is, and Play starts the song again from a fresh copy.
             failed(cur, cur.playerItem.error)
             return
         }
@@ -429,6 +433,12 @@ final class PlayerEngine: NSObject {
         preload = nil
         if next == pre.item {
             current = pre
+            // normally it's playing already; after the lined-up song was swapped for its MP3 version just as
+            // the last one ended, it may need starting
+            if wantsPlay && player.rate == 0 {
+                activateSession()
+                player.play()
+            }
         } else {
             // the lined-up song wasn't the next one after all (shouldn't happen): play the right one
             put(next, play: wantsPlay)
@@ -583,8 +593,10 @@ final class PlayerEngine: NSObject {
             if !e.usingFallback, e.item.fallback != nil, let cur = current {
                 let f = Entry(item: e.item, fallback: true)
                 watch(f)
-                if player.canInsert(f.playerItem, after: cur.playerItem) {
-                    player.insert(f.playerItem, after: cur.playerItem)
+                // after the current song, or last if AVQueuePlayer has already let go of it (it just ended)
+                let after: AVPlayerItem? = player.items().contains(cur.playerItem) ? cur.playerItem : nil
+                if player.canInsert(f.playerItem, after: after) {
+                    player.insert(f.playerItem, after: after)
                     preload = f
                 }
             }

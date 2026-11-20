@@ -158,6 +158,22 @@ final class PlayerEngineTests: XCTestCase {
         waitForSound()
     }
 
+    func testTheNextSongPlaysAsMP3WhenItsOriginalWontPlay() throws {
+        // the usual way a WMA song turns up: not first, but next in the list
+        let a = song("a", try tone("a", seconds: 1.5, freq: 330), seconds: 1.5)
+        let broken = dir.appendingPathComponent("broken3.wav")
+        try Data("still not audio".utf8).write(to: broken)
+        let b = song("b", broken, seconds: 2, fallback: try tone("b-mp3", seconds: 2, freq: 550))
+        engine.load(a, req: 1, startAt: 0, autoplay: true, restore: false)
+        engine.upcoming(key: "a", req: 1, items: [b], back: [], repeatOne: false)
+        waitForSound()
+        waitUntil(8, "b playing as its MP3 version") {
+            engine.current?.item.key == "b" && engine.current?.usingFallback == true && engine.isPlaying && engine.currentTime() > 0.2
+        }
+        XCTAssertEqual(page.advances.map { "\($0.from)>\($0.to ?? "-"):\($0.reason)" }, ["a>b:ended"])
+        XCTAssertTrue(page.errors.isEmpty, "the MP3 version played, so nothing to report")
+    }
+
     func testASongThatWontLoadWhilePausedIsLeftAlone() throws {
         let broken = dir.appendingPathComponent("broken2.wav")
         try Data("not audio either".utf8).write(to: broken)

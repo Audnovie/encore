@@ -13,14 +13,14 @@ final class IntegrationTests: XCTestCase {
 
     var app: XCUIApplication!
     private var runs = 0
-    /// checked once: the first request from a freshly started simulator can take half a minute to go out
-    private static var serversUp = false
+    /// checked once per run: the first request from a freshly started simulator can take half a minute to go out
+    private static var serversUp: Bool?
     private static var onCI: Bool { ProcessInfo.processInfo.environment["ENCORE_CI"] == "1" }
 
     override func setUpWithError() throws {
         continueAfterFailure = false
-        if !Self.serversUp { Self.serversUp = Self.reachable(Self.encore + "index.html", within: Self.onCI ? 90 : 3) }
-        let up = Self.serversUp
+        if Self.serversUp == nil { Self.serversUp = Self.reachable(Self.encore + "index.html", within: Self.onCI ? 90 : 3) }
+        let up = Self.serversUp == true
         if Self.onCI {
             // on CI the servers must be there: a missing server is a failure, not a skip
             XCTAssertTrue(up, "The test servers aren't running")
@@ -192,12 +192,14 @@ final class IntegrationTests: XCTestCase {
         js("__t.play(3, 3)")
         waitFor(20, "Song 4 playing") { native()["key"] as? String == s4 && (native()["t"] as? Double ?? 0) > 0.5 }
         // Back straight after Next: within 3 s of a song's start, Back goes to the song before (as in the
-        // Music app), and the song it came back from is next again
+        // Music app), and the song it came back from is next again. That ends where it started, so the two
+        // moves are counted in the app's news for the page.
+        let seq0 = native()["lastSeq"] as? Int ?? 0
         app.buttons["testNext"].tap()
         app.buttons["testPrev"].tap()
-        waitFor(10, "Next then Back: Song 4 again, with Song 5 next") {
+        waitFor(10, "Next then Back: two moves, ending on Song 4 with Song 5 next") {
             let n = native()
-            return n["key"] as? String == s4 && (n["aheadKeys"] as? [String])?.first == s5
+            return (n["lastSeq"] as? Int ?? 0) >= seq0 + 2 && n["key"] as? String == s4 && (n["aheadKeys"] as? [String])?.first == s5
         }
         waitFor(10, "the page following the lock screen") { page()["cur"] as? String == s4 }
         app.buttons["testNext"].tap()
@@ -293,6 +295,7 @@ final class IntegrationTests: XCTestCase {
         let field = app.textFields["addressField"]
         field.tap()
         // nothing listens on 4590 (not port 9: WebKit refuses to load "bad ports" and shows an empty page)
+        XCTAssertFalse(Self.reachable("http://127.0.0.1:4590/", within: 0), "something answers on port 4590")
         field.typeText("127.0.0.1:4590")
         app.buttons["connectButton"].tap()
         XCTAssertTrue(app.staticTexts["problemTitle"].waitForExistence(timeout: 30))

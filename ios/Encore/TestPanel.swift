@@ -113,6 +113,7 @@ final class TestPanel: UIView {
         s["pageReady"] = c.bridge.pageReady
         s["frozen"] = c.bridge.frozen
         s["unconfirmed"] = c.bridge.log.events.count
+        s["lastSeq"] = c.bridge.log.nextSeq - 1
         s["appState"] = UIApplication.shared.applicationState == .active ? "active" : UIApplication.shared.applicationState == .background ? "background" : "inactive"
         if let d = try? JSONSerialization.data(withJSONObject: s, options: [.sortedKeys]), let text = String(data: d, encoding: .utf8) {
             state.text = text
