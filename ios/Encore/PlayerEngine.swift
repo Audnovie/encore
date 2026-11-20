@@ -25,6 +25,8 @@ final class Entry {
     var insertedLast = false
     /// already the second try after a broken connection (see failed)
     var retried = false
+    /// seconds heard since then: after half a minute the song gets its one more try back (see tick)
+    var heardSinceRetry: Double = 0
     var statusWatch: NSKeyValueObservation?
 
     init(item: Item, fallback: Bool = false) {
@@ -602,8 +604,11 @@ final class PlayerEngine: NSObject {
             // its MP3 version when the phone can't play the original. Otherwise the move to it fails when the
             // current song ends, and is handled then.
             clearPreload()
-            let retry = !e.retried && PlayerEngine.isNetworkError(error)
-            if retry || (!e.usingFallback && e.item.fallback != nil), let cur = current {
+            let network = PlayerEngine.isNetworkError(error)
+            let retry = network && !e.retried
+            // (not the MP3 version after a broken connection: it's on the same server)
+            let toMP3 = !network && !e.usingFallback && e.item.fallback != nil
+            if retry || toMP3, let cur = current {
                 let f = Entry(item: e.item, fallback: retry ? e.usingFallback : true)
                 f.retried = retry
                 watch(f)
@@ -632,7 +637,7 @@ final class PlayerEngine: NSObject {
             // fallback, or every song with a lower quality chosen) with a length it estimates a little too high
             // (or, to a second request, with its real length), which AVFoundation also reports as a lost
             // connection. By then the server has the finished MP3 kept, with its exact length.
-            put(e.item, fallback: e.usingFallback, at: currentTime(), play: true)
+            put(e.item, fallback: e.usingFallback, at: e.item.isRadio ? 0 : currentTime(), play: true)
             current?.retried = true
             fillPreload()
             return
@@ -704,6 +709,11 @@ final class PlayerEngine: NSObject {
                 if dt > 0 && dt <= wall + 1 {
                     link?.countListening(dt)
                     errorsInARow = 0
+                    // a blip an hour into a long song or a station gets its one more try too
+                    if cur.retried {
+                        cur.heardSinceRetry += dt
+                        if cur.heardSinceRetry >= 30 { cur.retried = false }
+                    }
                 }
             }
             lastTick = (id, t, now)
