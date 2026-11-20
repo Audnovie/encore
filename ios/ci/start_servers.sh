@@ -43,6 +43,18 @@ for i in $(seq 1 60); do
 done
 echo "songs in Navidrome: $N"
 [ "$N" -ge 8 ]
+# Navidrome may still be busy (a full scan after its first database setup): the app's first sign-in stalled
+# on a busy database once (CI run 17). Wait until it reports no scan three times in a row.
+IDLE=0
+for i in $(seq 1 120); do
+  if curl -fsS "http://127.0.0.1:4533/rest/getScanStatus?$API" | python3 -c 'import json,sys; sys.exit(0 if not json.load(sys.stdin)["subsonic-response"]["scanStatus"]["scanning"] else 1)'; then
+    IDLE=$((IDLE + 1)); [ "$IDLE" -ge 3 ] && break
+  else
+    IDLE=0
+  fi
+  sleep 1
+done
+echo "Navidrome idle after ${i}s"
 
 echo "== nginx"
 MIME="$(brew --prefix)/etc/nginx/mime.types"

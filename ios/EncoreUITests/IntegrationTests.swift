@@ -120,6 +120,16 @@ final class IntegrationTests: XCTestCase {
     }
 
     @discardableResult
+    /// As waitFor, without failing the test.
+    func waitQuietly(_ timeout: TimeInterval, _ cond: () -> Bool) -> Bool {
+        let end = Date().addingTimeInterval(timeout)
+        while Date() < end {
+            if cond() { return true }
+            usleep(250_000)
+        }
+        return cond()
+    }
+
     func waitFor(_ timeout: TimeInterval, _ what: String, file: StaticString = #filePath, line: UInt = #line, _ cond: () -> Bool) -> Bool {
         let end = Date().addingTimeInterval(timeout)
         while Date() < end {
@@ -143,7 +153,13 @@ final class IntegrationTests: XCTestCase {
     func signIn() -> [String: String] {
         XCTAssertTrue(waitFor(30, "the page to say hello") { native()["pageReady"] as? Bool == true })
         js("__t.signIn('\(Self.user)', '\(Self.password)')")
-        waitFor(20, "signed in") { page()["signedIn"] as? Bool == true }
+        // a freshly started Navidrome can stall on the first sign-in (CI run 17: its database was busy and the
+        // request hung): once more if it didn't work
+        if !waitQuietly(30, { page()["signedIn"] as? Bool == true }) {
+            shot("sign-in-again")
+            js("__t.signIn('\(Self.user)', '\(Self.password)')")
+            waitFor(30, "signed in") { page()["signedIn"] as? Bool == true }
+        }
         var ids: [String: String] = [:]
         for pair in js("__t.ids()").split(separator: "|") {
             let p = pair.split(separator: "=", maxSplits: 1)
