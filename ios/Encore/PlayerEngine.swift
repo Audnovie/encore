@@ -797,7 +797,8 @@ final class PlayerEngine: NSObject {
               player.timeControlStatus == .waitingToPlayAtSpecifiedRate,
               let d = duration(), d > 0 else { return }
         let at = currentTime()
-        guard at >= d - 2 else { return }
+        // (past half way too: a song of 2 s or less is otherwise "near its end" while it starts)
+        guard at >= d - 2, at >= d * 0.5 else { return }
         DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak self] in
             guard let self = self, self.current === cur, self.wantsPlay, !cur.didEnd,
                   self.player.currentItem === cur.playerItem,
@@ -820,6 +821,8 @@ final class PlayerEngine: NSObject {
             return
         }
         cur.didEnd = true
+        // the next song starts from a fresh copy rather than the one lined up behind the stuck one
+        clearPreload()
         if !advance(.ended) { endOfList(cur) }
     }
 
