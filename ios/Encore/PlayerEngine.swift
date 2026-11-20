@@ -1129,6 +1129,11 @@ final class TranscodeWarmer {
                     self.finish(url)
                     return
                 }
+                // an error instead of music (a missing or broken file): nothing to wait for
+                if let h = http, h.statusCode >= 400 || !(h.mimeType ?? "").lowercased().hasPrefix("audio/") {
+                    self.finish(url)
+                    return
+                }
                 // nobody waits for it any more (the list changed, the song moved on): stop asking
                 let still = (self.waiting[url] ?? []).filter { $0.wanted() }
                 guard !still.isEmpty else {
