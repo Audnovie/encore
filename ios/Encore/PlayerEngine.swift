@@ -23,8 +23,8 @@ final class Entry {
     var failureHandled = false
     /// put last in the queue because the player had already let go of the song before it (see failed)
     var insertedLast = false
-    /// the MP3 version, tried a second time after its connection broke (see failed)
-    var retriedFallback = false
+    /// already the second try after a broken connection (see failed)
+    var retried = false
     var statusWatch: NSKeyValueObservation?
 
     init(item: Item, fallback: Bool = false) {
@@ -598,14 +598,14 @@ final class PlayerEngine: NSObject {
 
     private func failed(_ e: Entry, _ error: Error?) {
         if e === preload {
-            // the lined-up song can't be played: line up its MP3 version instead, or the MP3 version once more
-            // after its connection broke (see below). Otherwise the move to it fails when the current song
-            // ends, and is handled then.
+            // the lined-up song can't be played: line it up once more after a broken connection (see below), or
+            // its MP3 version when the phone can't play the original. Otherwise the move to it fails when the
+            // current song ends, and is handled then.
             clearPreload()
-            let retry = e.usingFallback && !e.retriedFallback && PlayerEngine.isNetworkError(error)
-            if !e.usingFallback || retry, e.item.fallback != nil, let cur = current {
-                let f = Entry(item: e.item, fallback: true)
-                f.retriedFallback = retry
+            let retry = !e.retried && PlayerEngine.isNetworkError(error)
+            if retry || (!e.usingFallback && e.item.fallback != nil), let cur = current {
+                let f = Entry(item: e.item, fallback: retry ? e.usingFallback : true)
+                f.retried = retry
                 watch(f)
                 // after the current song, or last if AVQueuePlayer has already let go of it (it just ended)
                 let after: AVPlayerItem? = player.items().contains(cur.playerItem) ? cur.playerItem : nil
@@ -626,12 +626,14 @@ final class PlayerEngine: NSObject {
             sendState()
             return
         }
-        if e.usingFallback && !e.retriedFallback && PlayerEngine.isNetworkError(error) {
-            // Navidrome sends a freshly made MP3 version with a length it estimates a little too high (or, to a
-            // second request, with its real length), which AVFoundation reports as a lost connection. By then
-            // the server has the finished MP3 kept, with its exact length: try once more from where it was.
-            put(e.item, fallback: true, at: currentTime(), play: true)
-            current?.retriedFallback = true
+        if !e.retried && PlayerEngine.isNetworkError(error) {
+            // Once more from where it was before saying the server can't be reached. A broken connection can be
+            // a blip (Wi-Fi or Tailscale changing over), and Navidrome sends a freshly made MP3 version (the
+            // fallback, or every song with a lower quality chosen) with a length it estimates a little too high
+            // (or, to a second request, with its real length), which AVFoundation also reports as a lost
+            // connection. By then the server has the finished MP3 kept, with its exact length.
+            put(e.item, fallback: e.usingFallback, at: currentTime(), play: true)
+            current?.retried = true
             fillPreload()
             return
         }

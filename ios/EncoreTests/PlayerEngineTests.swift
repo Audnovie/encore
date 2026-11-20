@@ -336,8 +336,15 @@ final class PlayerEngineTests: XCTestCase {
         let a = song("a", try tone("a", seconds: 8), seconds: 8)
         engine.load(a, req: 1, startAt: 0, autoplay: true, restore: false)
         waitForSound()
-        // as AVFoundation reports a stream that broke off part way (the song itself still "ready")
+        // as AVFoundation reports a stream that broke off part way (the song itself still "ready"): the first
+        // time it's tried once more from where it was, the second time the app stops and says so
         let lost = NSError(domain: NSURLErrorDomain, code: NSURLErrorNetworkConnectionLost)
+        let first = engine.current?.playerItem
+        NotificationCenter.default.post(name: .AVPlayerItemFailedToPlayToEndTime, object: first,
+                                        userInfo: [AVPlayerItemFailedToPlayToEndTimeErrorKey: lost])
+        waitUntil(3, "tried once more") { engine.current != nil && engine.current?.playerItem !== first }
+        XCTAssertTrue(page.errors.isEmpty)
+        waitForSound()
         NotificationCenter.default.post(name: .AVPlayerItemFailedToPlayToEndTime, object: engine.current?.playerItem,
                                         userInfo: [AVPlayerItemFailedToPlayToEndTimeErrorKey: lost])
         waitUntil(3, "stopped with a message") { !engine.wantsPlay && page.errors == ["a"] }
