@@ -46,9 +46,6 @@ jobs:
       - name: Audio output for the simulator
         run: bash ios/ci/audio_check.sh 2>&1 | tee logs/audio.log
 
-      - name: Test servers (Navidrome, nginx serving this commit's Encore page)
-        run: bash ios/ci/start_servers.sh 2>&1 | tee logs/servers.log
-
       - name: Generate the Xcode project
         working-directory: ios
         run: xcodegen generate 2>&1 | tee ../logs/xcodegen.log
@@ -63,15 +60,18 @@ jobs:
               if "iOS" not in rt: continue
               ver = tuple(int(x) for x in rt.split("iOS-")[-1].split("-"))
               for dev in devs:
-                  if dev["name"] in ("iPhone 17 Pro", "iPhone 17", "iPhone 16 Pro"):
-                      if best is None or ver > best[0]: best = (ver, dev["udid"], dev["name"])
-          print(best[1])
-          sys.stderr.write("simulator: %s iOS %s\n" % (best[2], ".".join(map(str, best[0]))))
+                  name = dev["name"]
+                  rank = 2 if name in ("iPhone 17 Pro", "iPhone 17", "iPhone 16 Pro") else 1 if name.startswith("iPhone") else 0
+                  if rank and (best is None or (rank, ver) > (best[0], best[1])): best = (rank, ver, dev["udid"], name)
+          if best is None: sys.exit("no iPhone simulator")
+          print(best[2])
+          sys.stderr.write("simulator: %s iOS %s\n" % (best[3], ".".join(map(str, best[1]))))
           ')
           echo "SIM=$UDID" >> "$GITHUB_ENV"
           xcrun simctl boot "$UDID" || true
 
       - name: Build for the simulator
+        id: build
         working-directory: ios
         run: |
           set -o pipefail
@@ -87,6 +87,8 @@ jobs:
           xcrun simctl status_bar "$SIM" override --time 9:41 || true
 
       - name: Unit tests (queue, news log, addresses, the real player with tone files)
+        # each part runs whenever the build worked, so one run shows every problem
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
         working-directory: ios
         run: |
           set -o pipefail
@@ -95,8 +97,13 @@ jobs:
             -only-testing:EncoreTests -resultBundlePath build/Unit.xcresult \
             2>&1 | tee ../logs/unit-full.log | grep -E "error:|Test Case|Executed|\*\* " | tee ../logs/unit.log
 
+      - name: Test servers (Navidrome, nginx serving this commit's Encore page)
+        id: servers
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        run: bash ios/ci/start_servers.sh 2>&1 | tee logs/servers.log
+
       - name: App tests against Navidrome
-        if: success() || failure()
+        if: ${{ !cancelled() && steps.servers.outcome == 'success' }}
         working-directory: ios
         run: |
           set -o pipefail
@@ -130,7 +137,8 @@ jobs:
           rm -f ../logs/sim-app.log
 
       - name: Build the unsigned .ipa
-        if: success()
+        id: ipa
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
         working-directory: ios
         run: |
           set -o pipefail
@@ -148,12 +156,13 @@ jobs:
           shasum -a 256 ../dist/Encore.ipa | tee ../dist/Encore.ipa.sha256 | tee -a ../logs/ipa-contents.log
 
       - uses: actions/upload-artifact@v4
-        if: success()
+        if: ${{ !cancelled() && steps.ipa.outcome == 'success' }}
         with:
           name: Encore-ipa
           path: dist/Encore.ipa
 
       - name: Publish as the latest release
+        # only when every test passed
         if: success() && github.ref == 'refs/heads/main'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

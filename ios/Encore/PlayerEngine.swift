@@ -607,7 +607,7 @@ final class PlayerEngine: NSObject {
             return
         }
         if !e.usingFallback, e.item.fallback != nil {
-            // the phone can't play the original file (OGG, for example): ask the server for MP3 instead
+            // the phone can't play the original file (WMA, for example): ask the server for MP3 instead
             let t = currentTime()
             put(e.item, fallback: true, at: t, play: true)
             fillPreload()

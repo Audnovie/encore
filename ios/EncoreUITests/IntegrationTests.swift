@@ -231,11 +231,11 @@ final class IntegrationTests: XCTestCase {
     func test5FallbackAndSongsThatWontPlay() {
         launch(fresh: true)
         let ids = signIn()
-        let ogg = ids["Vorbis Song"]!, s2 = ids["Song 2"]!
-        js("__t.playIds(['\(ogg)', '\(s2)'])")
-        waitFor(25, "the OGG song playing as MP3 from Navidrome") {
+        let wma = ids["WMA Song"]!, s2 = ids["Song 2"]!
+        js("__t.playIds(['\(wma)', '\(s2)'])")
+        waitFor(25, "the WMA song playing as MP3 from Navidrome") {
             let n = native()
-            return n["key"] as? String == ogg && n["fallback"] as? Bool == true && (n["t"] as? Double ?? 0) > 0.5
+            return n["key"] as? String == wma && n["fallback"] as? Bool == true && (n["t"] as? Double ?? 0) > 0.5
         }
         js("__t.playIds(['no-such-song', '\(s2)'])")
         waitFor(25, "a song that won't play is skipped") { native()["key"] as? String == s2 && (native()["t"] as? Double ?? 0) > 0.3 }
