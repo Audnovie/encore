@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """The test library for the app tests on CI: short tone-only songs with made-up names, made with ffmpeg.
-Songs 1-3 are 6 s (moving on by itself), 4-6 are 20 s (lock screen buttons), and one Windows Media song,
-which iPhones can't play, so the app has to ask Navidrome for MP3 instead. (WMA rather than Ogg: it's made
-with ffmpeg's own encoder, which every ffmpeg build has, and no iOS version has ever played it.)"""
+Songs 1-3 are 6 s (moving on by itself), 4-6 are 20 s (lock screen buttons), all MP3 at 192 kbps (so the
+"Low" quality, 128 kbps, makes Navidrome convert them), and two Windows Media songs, which iPhones can't play,
+so the app has to ask Navidrome for MP3 instead. (WMA rather than Ogg: it's made with ffmpeg's own encoder,
+which every ffmpeg build has, and no iOS version has ever played it.)"""
 import os, shutil, subprocess, sys
 
 root = sys.argv[1]
@@ -17,6 +18,7 @@ songs = [
     ('Encore Test/Long Songs/02 Song 5.mp3', 'Song 5', 'Long Songs', 2, 20, 523),
     ('Encore Test/Long Songs/03 Song 6.mp3', 'Song 6', 'Long Songs', 3, 20, 587),
     ('Encore Test/Other/WMA Song.wma', 'WMA Song', 'Other', 1, 6, 659),
+    ('Encore Test/Other/WMA Song 2.wma', 'WMA Song 2', 'Other', 2, 6, 698),
 ]
 
 for path, title, album, track, seconds, hz in songs:
@@ -27,7 +29,7 @@ for path, title, album, track, seconds, hz in songs:
            '-metadata', f'title={title}', '-metadata', 'artist=Encore Test', '-metadata', f'album={album}',
            '-metadata', f'track={track}', '-metadata', 'album_artist=Encore Test']
     if out.endswith('.mp3'):
-        cmd += ['-c:a', 'libmp3lame', '-b:a', '128k', '-id3v2_version', '3']
+        cmd += ['-c:a', 'libmp3lame', '-b:a', '192k', '-id3v2_version', '3']
     else:
         cmd += ['-c:a', 'wmav2', '-b:a', '128k']
     subprocess.run(cmd + [out], check=True)

@@ -38,11 +38,11 @@ API="u=$USER_NAME&p=$PASSWORD&v=1.16.1&c=ci&f=json"
 curl -fsS "http://127.0.0.1:4533/rest/startScan?$API" > /dev/null
 for i in $(seq 1 60); do
   N=$(curl -fsS "http://127.0.0.1:4533/rest/search3?$API&query=&songCount=50" | python3 -c 'import json,sys; print(len(json.load(sys.stdin)["subsonic-response"].get("searchResult3",{}).get("song",[])))')
-  [ "$N" -ge 7 ] && break
+  [ "$N" -ge 8 ] && break
   sleep 1
 done
 echo "songs in Navidrome: $N"
-[ "$N" -ge 7 ]
+[ "$N" -ge 8 ]
 
 echo "== nginx"
 MIME="$(brew --prefix)/etc/nginx/mime.types"

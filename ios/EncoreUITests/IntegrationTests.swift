@@ -149,7 +149,7 @@ final class IntegrationTests: XCTestCase {
             let p = pair.split(separator: "=", maxSplits: 1)
             if p.count == 2 { ids[String(p[0])] = String(p[1]) }
         }
-        XCTAssertEqual(ids.count, 7, "test library: \(ids)")
+        XCTAssertEqual(ids.count, 8, "test library: \(ids)")
         return ids
     }
 
@@ -259,19 +259,33 @@ final class IntegrationTests: XCTestCase {
     func test5FallbackAndSongsThatWontPlay() {
         launch(fresh: true)
         let ids = signIn()
-        let wma = ids["WMA Song"]!, s2 = ids["Song 2"]!
+        let wma = ids["WMA Song"]!, wma2 = ids["WMA Song 2"]!, s1 = ids["Song 1"]!, s2 = ids["Song 2"]!
+        // first in the list: played as Navidrome's MP3 version once the server has made it
         js("__t.playIds(['\(wma)', '\(s2)'])")
         waitFor(25, "the WMA song playing as MP3 from Navidrome") {
             let n = native()
             return n["key"] as? String == wma && n["fallback"] as? Bool == true && (n["t"] as? Double ?? 0) > 0.5
         }
-        // ...to its end (6 s), then on to Song 2 by itself, with nothing reported (Navidrome's freshly made MP3
-        // comes with a slightly wrong length; the app tries it once more instead of giving up)
+        // ...to its end (6 s), then on to Song 2 by itself, with nothing reported: the app waited for Navidrome to
+        // finish making the MP3, so AVPlayer had its exact length
         waitFor(25, "the WMA song played to its end, then Song 2") {
             let n = native()
             return n["key"] as? String == s2 && (n["t"] as? Double ?? 0) > 0.3
         }
         XCTAssertEqual(native()["lastError"] as? String, "", "no error reported for the WMA song")
+        XCTAssertEqual(native()["stallEnds"] as? Int, 0, "it really ended: AVPlayer had the finished MP3, exact length")
+        // next in the list: its MP3 version is made and lined up while Song 1 plays, then straight on
+        js("__t.playIds(['\(s1)', '\(wma2)', '\(s2)'])")
+        waitFor(30, "Song 1, then WMA Song 2 as MP3") {
+            let n = native()
+            return n["key"] as? String == wma2 && n["fallback"] as? Bool == true && (n["t"] as? Double ?? 0) > 0.3
+        }
+        waitFor(25, "WMA Song 2 played to its end, then Song 2") {
+            let n = native()
+            return n["key"] as? String == s2 && (n["t"] as? Double ?? 0) > 0.3
+        }
+        XCTAssertEqual(native()["lastError"] as? String, "")
+        XCTAssertEqual(native()["stallEnds"] as? Int, 0)
         // Song 2 is already playing, so the skip is told apart by the error reported for the missing song
         js("__t.playIds(['no-such-song', '\(s2)'])")
         waitFor(25, "a song that won't play is reported and skipped") {
@@ -325,6 +339,25 @@ final class IntegrationTests: XCTestCase {
             app.staticTexts["problemTitle"].exists && app.staticTexts["problemTitle"].label == "This isn’t Encore"
         })
         shot("not-encore")
+    }
+
+    func test8LowerQuality() {
+        launch(fresh: true)
+        let ids = signIn()
+        let s1 = ids["Song 1"]!, s3 = ids["Song 3"]!
+        // "Low" (128 kbps): every song is one of Navidrome's MP3 versions. The next one is made on the server
+        // while one plays, so it plays to its real end; only the first can wait at its end (then counts as ended).
+        XCTAssertEqual(js("(__encore.Settings.set('quality', '128'), __encore.Settings.get('quality'))"), "128")
+        js("__t.play(0, 3)")
+        waitFor(25, "Song 1 playing, converted by Navidrome") {
+            native()["key"] as? String == s1 && (native()["t"] as? Double ?? 0) > 0.5
+        }
+        waitFor(45, "on to Song 3 by itself") {
+            native()["key"] as? String == s3 && (native()["t"] as? Double ?? 0) > 0.3
+        }
+        let n = native()
+        XCTAssertEqual(n["lastError"] as? String, "", "nothing reported")
+        XCTAssertLessThanOrEqual(n["stallEnds"] as? Int ?? 9, 1, "only the first song could have waited at its end")
     }
 }
 

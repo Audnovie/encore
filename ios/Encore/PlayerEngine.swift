@@ -71,6 +71,12 @@ final class PlayerEngine: NSObject {
     private var rejectedKey = ""
     /// the reason given with the last error reported to the page (for the test panel)
     private(set) var lastErrorReason = ""
+    /// songs whose original file the phone couldn't play: their MP3 version is used from then on
+    private var mp3Keys = Set<String>()
+    /// gets Navidrome's MP3 versions made before AVPlayer asks for them
+    let warmer = TranscodeWarmer()
+    /// songs counted as ended because they stuck just before the end (for the test panel)
+    private(set) var stallEnds = 0
 
 
     override init() {
@@ -214,6 +220,7 @@ final class PlayerEngine: NSObject {
 
     func stop() {
         rejectedKey = ""
+        mp3Keys.removeAll()
         wantsPlay = false
         player.pause()
         clearPreload()
@@ -359,7 +366,7 @@ final class PlayerEngine: NSObject {
 
     /// Puts a song in the player, with nothing after it yet.
     private func put(_ item: Item, fallback: Bool = false, at t: Double = 0, play: Bool) {
-        let e = Entry(item: item, fallback: fallback)
+        let e = Entry(item: item, fallback: fallback || (item.fallback != nil && mp3Keys.contains(item.key)))
         watch(e)
         clearPreload()
         player.removeAllItems()
@@ -480,13 +487,33 @@ final class PlayerEngine: NSObject {
         if let p = preload, let w = want, p.item == w, player.items().contains(p.playerItem) { return }
         clearPreload()
         guard let w = want else { return }
-        let e = Entry(item: w)
+        linePreload(w, fallback: w.fallback != nil && mp3Keys.contains(w.key), retried: false, after: cur, orLast: false)
+        if let art = w.art { artwork.fetch(art) { _ in } }
+    }
+
+    /// Lines up the next song after `cur` (or last in the queue, `orLast`, when the player has already let go
+    /// of `cur`). One of Navidrome's MP3 versions is lined up once the server has finished making it.
+    private func linePreload(_ item: Item, fallback: Bool, retried: Bool, after cur: Entry, orLast: Bool) {
+        let url = fallback ? (item.fallback ?? item.url) : item.url
+        if TranscodeWarmer.isTranscode(url) && !warmer.isSettled(url) {
+            warmer.warm(url, within: 90) { [weak self] in
+                guard let self = self, self.current === cur, self.preload == nil, !cur.didEnd,
+                      self.queue.ahead.first == item else { return }
+                self.linePreload(item, fallback: fallback, retried: retried, after: cur, orLast: orLast)
+            }
+            return
+        }
+        let inQueue = player.items().contains(cur.playerItem)
+        guard inQueue || orLast else { return }
+        let e = Entry(item: item, fallback: fallback)
+        e.retried = retried
         watch(e)
-        if player.canInsert(e.playerItem, after: cur.playerItem) {
-            player.insert(e.playerItem, after: cur.playerItem)
+        let after: AVPlayerItem? = inQueue ? cur.playerItem : nil
+        if player.canInsert(e.playerItem, after: after) {
+            player.insert(e.playerItem, after: after)
+            e.insertedLast = after == nil
             preload = e
         }
-        if let art = w.art { artwork.fetch(art) { _ in } }
     }
 
     private func clearPreload() {
@@ -608,17 +635,10 @@ final class PlayerEngine: NSObject {
             let retry = network && !e.retried
             // (not the MP3 version after a broken connection: it's on the same server)
             let toMP3 = !network && !e.usingFallback && e.item.fallback != nil
+            if toMP3 { mp3Keys.insert(e.item.key) }
             if retry || toMP3, let cur = current {
-                let f = Entry(item: e.item, fallback: retry ? e.usingFallback : true)
-                f.retried = retry
-                watch(f)
                 // after the current song, or last if AVQueuePlayer has already let go of it (it just ended)
-                let after: AVPlayerItem? = player.items().contains(cur.playerItem) ? cur.playerItem : nil
-                if player.canInsert(f.playerItem, after: after) {
-                    player.insert(f.playerItem, after: after)
-                    f.insertedLast = after == nil
-                    preload = f
-                }
+                linePreload(e.item, fallback: retry ? e.usingFallback : true, retried: retry, after: cur, orLast: true)
             }
             return
         }
@@ -654,9 +674,8 @@ final class PlayerEngine: NSObject {
         }
         if !e.usingFallback, e.item.fallback != nil {
             // the phone can't play the original file (WMA, for example): ask the server for MP3 instead
-            let t = currentTime()
-            put(e.item, fallback: true, at: t, play: true)
-            fillPreload()
+            mp3Keys.insert(e.item.key)
+            startMP3Version(e, at: currentTime())
             return
         }
         reportError(e.item.key, error?.localizedDescription ?? "The song couldn’t be played.", reason: "unplayable")
@@ -674,6 +693,27 @@ final class PlayerEngine: NSObject {
             player.pause()
             sendState()
             nowPlaying()
+        }
+    }
+
+    /// Plays the song's MP3 version once Navidrome has made it (at most 15 s, then anyway), so AVPlayer gets
+    /// the finished file with its exact length rather than one being made (see TranscodeWarmer).
+    private func startMP3Version(_ e: Entry, at t: Double) {
+        guard let f = e.item.fallback else { return }
+        let go: () -> Void = { [weak self] in
+            guard let self = self, self.current === e, self.wantsPlay else { return }
+            self.put(e.item, fallback: true, at: t, play: true)
+            self.fillPreload()
+        }
+        if !TranscodeWarmer.isTranscode(f) || warmer.isSettled(f) {
+            go()
+            return
+        }
+        // nothing is playing meanwhile: ask iOS for the time, in case the phone is locked
+        let time = BackgroundTime.begin("Encore: MP3 version")
+        warmer.warm(f, within: 15) {
+            go()
+            time.end()
         }
     }
 
@@ -811,6 +851,7 @@ final class PlayerEngine: NSObject {
 
     /// As ended(), for a song the player never quite finished.
     private func finishStalled(_ cur: Entry) {
+        stallEnds += 1
         if queue.repeatOne {
             // again from the start, from a fresh copy (by now the server has the finished MP3, exact length)
             put(cur.item, fallback: cur.usingFallback, at: 0, play: true)
@@ -943,6 +984,7 @@ final class PlayerEngine: NSObject {
             "preload": preload?.item.key ?? "",
             "errors": errorsInARow,
             "lastError": lastErrorReason,
+            "stallEnds": stallEnds,
             "own": current != nil && !currentFromPage,
             "scrobbles": scrobbleLog.filter { $0.submission && $0.ok }.count,
             "nowPlaying": MPNowPlayingInfoCenter.default().nowPlayingInfo?[MPMediaItemPropertyTitle] as? String ?? "",
@@ -1012,5 +1054,78 @@ final class ArtworkCache {
                 done(img)
             }
         }.resume()
+    }
+}
+
+/// Gets Navidrome's transcodes (`format=` other than raw: the MP3 versions) made before AVPlayer asks for one.
+/// A transcode being made is sent with `Accept-Ranges: none` and an estimated length about 2% too high (with
+/// estimateContentLength), which leaves AVPlayer waiting for bytes that never come or reporting a lost
+/// connection. A HEAD request makes Navidrome make it in the background; once it's finished and kept, the
+/// server answers with `Accept-Ranges: bytes` and the exact length (core/stream/media_streamer.go).
+final class TranscodeWarmer {
+    private var settled = Set<URL>()
+    private var waiting: [URL: [() -> Void]] = [:]
+
+    static func isTranscode(_ url: URL) -> Bool {
+        guard let items = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems,
+              let format = items.first(where: { $0.name == "format" })?.value else { return false }
+        return !format.isEmpty && format.lowercased() != "raw"
+    }
+
+    /// ready on the server, or given up on (then AVPlayer gets it as it is)
+    func isSettled(_ url: URL) -> Bool { settled.contains(url) }
+
+    /// Calls `done` on the main queue once the server has it finished and kept, or after `within` seconds.
+    func warm(_ url: URL, within: TimeInterval, done: @escaping () -> Void) {
+        if settled.contains(url) {
+            done()
+            return
+        }
+        if waiting[url] != nil {
+            waiting[url]?.append(done)
+            return
+        }
+        waiting[url] = [done]
+        ask(url, until: Date().addingTimeInterval(within))
+    }
+
+    private func ask(_ url: URL, until deadline: Date) {
+        var req = URLRequest(url: url, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 10)
+        req.httpMethod = "HEAD"
+        URLSession.shared.dataTask(with: req) { [weak self] _, response, _ in
+            let ranges = (response as? HTTPURLResponse)?.value(forHTTPHeaderField: "Accept-Ranges")?.lowercased()
+            DispatchQueue.main.async {
+                guard let self = self else { return }
+                if ranges == "bytes" || Date() >= deadline {
+                    self.finish(url)
+                } else {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in self?.ask(url, until: deadline) }
+                }
+            }
+        }.resume()
+    }
+
+    private func finish(_ url: URL) {
+        if settled.count > 500 { settled.removeAll() }
+        settled.insert(url)
+        let done = waiting.removeValue(forKey: url) ?? []
+        done.forEach { $0() }
+    }
+}
+
+/// A little time for work while the app is in the background with nothing playing.
+final class BackgroundTime {
+    private var id: UIBackgroundTaskIdentifier = .invalid
+
+    static func begin(_ name: String) -> BackgroundTime {
+        let b = BackgroundTime()
+        b.id = UIApplication.shared.beginBackgroundTask(withName: name) { [weak b] in b?.end() }
+        return b
+    }
+
+    func end() {
+        guard id != .invalid else { return }
+        UIApplication.shared.endBackgroundTask(id)
+        id = .invalid
     }
 }
