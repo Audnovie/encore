@@ -88,8 +88,9 @@ final class RootViewController: UIViewController, WKNavigationDelegate, WKUIDele
             testPanel = panel
         }
 
-        let start = { [weak self] in
-            if let a = Address.saved { self?.open(a) } else { self?.showSetup(cancellable: false) }
+        let start: () -> Void = { [weak self] in
+            guard let self = self else { return }
+            if let a = Address.saved { self.open(a) } else { self.showSetup(cancellable: false) }
         }
         if fresh {
             WKWebsiteDataStore.default().removeData(ofTypes: WKWebsiteDataStore.allWebsiteDataTypes(), modifiedSince: .distantPast, completionHandler: start)
