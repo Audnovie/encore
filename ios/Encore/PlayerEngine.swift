@@ -390,7 +390,10 @@ final class PlayerEngine: NSObject {
         let from = cur.item
         guard let next = queue.move(m) else { return false }
         let play = (m == .next || m == .prev) ? true : wantsPlay
-        if m != .prev, let pre = preload, pre.item == next, player.items().contains(pre.playerItem) {
+        // The lined-up song is only used when moving on from a song that played. After a failure, AVQueuePlayer
+        // can sit "waiting" forever on the song it had lined up, so that one starts afresh instead (put).
+        let healthy = m != .skip && !cur.failureHandled && cur.playerItem.status != .failed
+        if m != .prev, healthy, let pre = preload, pre.item == next, player.items().contains(pre.playerItem) {
             // the song is already lined up in the player (and may already be playing, after a failure)
             preload = nil
             current = pre

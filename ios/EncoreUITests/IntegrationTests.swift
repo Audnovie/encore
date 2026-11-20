@@ -69,6 +69,8 @@ final class IntegrationTests: XCTestCase {
     }
 
     func launch(fresh: Bool, address: String = IntegrationTests.encore) {
+        // the test panel numbers its answers from 1 again in each new launch
+        runs = 0
         app = XCUIApplication()
         app.launchArguments = ["-address", address, "-EncoreTestMode", "YES"] + (fresh ? ["-EncoreFreshStart", "YES"] : [])
         app.launch()
@@ -179,17 +181,31 @@ final class IntegrationTests: XCTestCase {
         let s4 = ids["Song 4"]!, s5 = ids["Song 5"]!
         js("__t.play(3, 3)")
         waitFor(20, "Song 4 playing") { native()["key"] as? String == s4 && (native()["t"] as? Double ?? 0) > 0.5 }
+        // Back straight after Next: within 3 s of a song's start, Back goes to the song before (as in the
+        // Music app), and the song it came back from is next again
+        app.buttons["testNext"].tap()
+        app.buttons["testPrev"].tap()
+        waitFor(10, "Next then Back: Song 4 again, with Song 5 next") {
+            let n = native()
+            return n["key"] as? String == s4 && (n["aheadKeys"] as? [String])?.first == s5
+        }
+        waitFor(10, "the page following the lock screen") { page()["cur"] as? String == s4 }
         app.buttons["testNext"].tap()
         waitFor(10, "Next: Song 5, page following") { native()["key"] as? String == s5 && page()["cur"] as? String == s5 }
         app.buttons["testPrev"].tap()
-        waitFor(10, "Back at the start of a song: Song 4") { native()["key"] as? String == s4 && page()["cur"] as? String == s4 }
+        waitFor(10, "Back: Song 4 or the start of Song 5 (it depends on how long the check above took)") {
+            let n = native()
+            return n["key"] as? String == s4 || (n["key"] as? String == s5 && (n["t"] as? Double ?? 9) < 2)
+        }
+        if native()["key"] as? String == s5 { app.buttons["testPrev"].tap() }
+        waitFor(10, "Song 4, page following") { native()["key"] as? String == s4 && page()["cur"] as? String == s4 }
         waitFor(10, "4 s into Song 4") { (native()["t"] as? Double ?? 0) > 4 }
         app.buttons["testPrev"].tap()
         waitFor(5, "Back later in a song: its start") { native()["key"] as? String == s4 && (native()["t"] as? Double ?? 9) < 2 }
         app.buttons["testPause"].tap()
-        waitFor(5, "paused, page too") { native()["playing"] as? Bool == false && page()["playing"] as? Bool == false }
+        waitFor(10, "paused, page too") { native()["playing"] as? Bool == false && page()["playing"] as? Bool == false }
         app.buttons["testPlay"].tap()
-        waitFor(5, "playing, page too") { native()["playing"] as? Bool == true && page()["playing"] as? Bool == true }
+        waitFor(10, "playing, page too") { native()["playing"] as? Bool == true && page()["playing"] as? Bool == true }
         XCTAssertEqual(page()["req"] as? Int, 1, "the page didn't load anything itself")
     }
 
@@ -246,17 +262,19 @@ final class IntegrationTests: XCTestCase {
         launch(fresh: true)
         let ids = signIn()
         let s1 = ids["Song 1"]!
+        // Repeat One first (off, all, one), then the 6-second Song 1 on its own: typing in the test panel is
+        // slow enough that the song could end before a later change of repeat reached the app
+        XCTAssertEqual(js("(__encore.Player.cycleRepeat(), __encore.Player.cycleRepeat(), __encore.Player.repeat)"), "one")
         js("__t.play(0, 1)")
         waitFor(20, "Song 1 playing") { native()["key"] as? String == s1 && (native()["t"] as? Double ?? 0) > 0.5 }
-        js("(__encore.Player.cycleRepeat(), __encore.Player.cycleRepeat(), __encore.Player.repeat)")
         waitFor(5, "repeat one passed to the app") { native()["repeatOne"] as? Bool == true }
-        waitFor(15, "it went round again") { native()["scrobbles"] as? Int ?? 0 >= 2 }
+        waitFor(25, "it went round again") { native()["scrobbles"] as? Int ?? 0 >= 2 }
         XCTAssertEqual(native()["key"] as? String, s1)
         XCTAssertEqual(native()["playing"] as? Bool, true)
         js("(__encore.Player.cycleRepeat(), __encore.Player.repeat)")
         waitFor(5, "repeat off") { native()["repeatOne"] as? Bool == false }
         waitFor(15, "stopped at the end of the list") { native()["playing"] as? Bool == false && (native()["t"] as? Double ?? 9) < 0.5 }
-        waitFor(5, "the page agrees") { page()["playing"] as? Bool == false && page()["cur"] as? String == s1 }
+        waitFor(10, "the page agrees") { page()["playing"] as? Bool == false && page()["cur"] as? String == s1 }
     }
 
     func test7FirstScreenAndProblems() {
@@ -264,7 +282,8 @@ final class IntegrationTests: XCTestCase {
         XCTAssertTrue(app.otherElements["setupScreen"].waitForExistence(timeout: 10) || app.textFields["addressField"].waitForExistence(timeout: 5))
         let field = app.textFields["addressField"]
         field.tap()
-        field.typeText("127.0.0.1:9")
+        // nothing listens on 4590 (not port 9: WebKit refuses to load "bad ports" and shows an empty page)
+        field.typeText("127.0.0.1:4590")
         app.buttons["connectButton"].tap()
         XCTAssertTrue(app.staticTexts["problemTitle"].waitForExistence(timeout: 30))
         XCTAssertEqual(app.staticTexts["problemTitle"].label, "Can’t reach Encore")

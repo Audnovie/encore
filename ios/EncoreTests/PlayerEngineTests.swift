@@ -172,6 +172,7 @@ final class PlayerEngineTests: XCTestCase {
         engine.play()                        // Play tries again; now it's reported and skipped
         waitUntil(8, "skipped to z after Play") { engine.current?.item.key == "z" }
         XCTAssertEqual(page.errors, ["y"])
+        waitForSound()                       // and z really plays (not stuck waiting behind the failed song)
     }
 
     func testCantReachTheServerStopsInsteadOfSkipping() throws {
