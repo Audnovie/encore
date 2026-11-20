@@ -503,8 +503,10 @@ final class PlayerEngine: NSObject {
 
     private func ended(_ item: AVPlayerItem) {
         guard let cur = current, cur.playerItem === item, !cur.didEnd else { return }
-        if queue.repeatOne && !cur.item.isRadio {
-            // repeat one: again from the start, and each time round counts as a play
+        // repeat one: again from the start, and each time round counts as a play. Only while the player is still
+        // on the song: if Repeat One was switched on just as it ended, after AVQueuePlayer had already moved on
+        // to the next one, that's a normal end.
+        if queue.repeatOne && !cur.item.isRadio && player.currentItem === cur.playerItem {
             songChanged()
             cur.playerItem.seek(to: .zero, toleranceBefore: .zero, toleranceAfter: .zero) { [weak self] _ in
                 DispatchQueue.main.async {
