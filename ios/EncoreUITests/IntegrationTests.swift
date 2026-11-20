@@ -13,11 +13,15 @@ final class IntegrationTests: XCTestCase {
 
     var app: XCUIApplication!
     private var runs = 0
+    /// checked once: the first request from a freshly started simulator can take half a minute to go out
+    private static var serversUp = false
+    private static var onCI: Bool { ProcessInfo.processInfo.environment["ENCORE_CI"] == "1" }
 
     override func setUpWithError() throws {
         continueAfterFailure = false
-        let up = Self.reachable(Self.encore + "index.html")
-        if ProcessInfo.processInfo.environment["ENCORE_CI"] == "1" {
+        if !Self.serversUp { Self.serversUp = Self.reachable(Self.encore + "index.html", within: Self.onCI ? 90 : 3) }
+        let up = Self.serversUp
+        if Self.onCI {
             // on CI the servers must be there: a missing server is a failure, not a skip
             XCTAssertTrue(up, "The test servers aren't running")
             if !up { throw XCTSkip("no servers") }
@@ -28,18 +32,24 @@ final class IntegrationTests: XCTestCase {
 
     // MARK: - helpers
 
-    static func reachable(_ s: String) -> Bool {
+    /// Whether the address answers 200, trying again until `within` seconds have passed.
+    static func reachable(_ s: String, within: TimeInterval) -> Bool {
         guard let url = URL(string: s) else { return false }
-        let done = DispatchSemaphore(value: 0)
-        let ok = Box(false)
-        var req = URLRequest(url: url)
-        req.timeoutInterval = 5
-        URLSession.shared.dataTask(with: req) { _, r, _ in
-            ok.value = (r as? HTTPURLResponse)?.statusCode == 200
-            done.signal()
-        }.resume()
-        _ = done.wait(timeout: .now() + 6)
-        return ok.value
+        let end = Date().addingTimeInterval(within)
+        repeat {
+            let done = DispatchSemaphore(value: 0)
+            let ok = Box(false)
+            var req = URLRequest(url: url, cachePolicy: .reloadIgnoringLocalCacheData)
+            req.timeoutInterval = 10
+            URLSession.shared.dataTask(with: req) { _, r, _ in
+                ok.value = (r as? HTTPURLResponse)?.statusCode == 200
+                done.signal()
+            }.resume()
+            _ = done.wait(timeout: .now() + 11)
+            if ok.value { return true }
+            Thread.sleep(forTimeInterval: 1)
+        } while Date() < end
+        return false
     }
 
     /// A Subsonic call to Navidrome from the test itself.
