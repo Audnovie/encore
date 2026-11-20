@@ -786,6 +786,41 @@ final class PlayerEngine: NSObject {
     private func playStateChanged() {
         sendState()
         nowPlaying()
+        checkStallAtEnd()
+    }
+
+    /// Navidrome's freshly made MP3 versions (the fallback, or every song with a lower quality chosen) promise
+    /// a few more bytes than they send, so the player can sit "waiting" just before the end for bytes that never
+    /// come (seen on CI: stuck at 5.9 s of 6). Stuck in a song's last 2 seconds for 3 seconds: it has ended.
+    private func checkStallAtEnd() {
+        guard let cur = current, wantsPlay, !cur.didEnd, !cur.item.isRadio,
+              player.timeControlStatus == .waitingToPlayAtSpecifiedRate,
+              let d = duration(), d > 0 else { return }
+        let at = currentTime()
+        guard at >= d - 2 else { return }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak self] in
+            guard let self = self, self.current === cur, self.wantsPlay, !cur.didEnd,
+                  self.player.currentItem === cur.playerItem,
+                  self.player.timeControlStatus == .waitingToPlayAtSpecifiedRate,
+                  abs(self.currentTime() - at) < 0.5 else { return }
+            NSLog("%@", "Encore: \(cur.item.key) stalled just before its end; counting it as ended")
+            self.finishStalled(cur)
+        }
+    }
+
+    /// As ended(), for a song the player never quite finished.
+    private func finishStalled(_ cur: Entry) {
+        if queue.repeatOne {
+            // again from the start, from a fresh copy (by now the server has the finished MP3, exact length)
+            put(cur.item, fallback: cur.usingFallback, at: 0, play: true)
+            songChanged()
+            fillPreload()
+            nowPlaying(reset: true)
+            sendState()
+            return
+        }
+        cur.didEnd = true
+        if !advance(.ended) { endOfList(cur) }
     }
 
     private func finite(_ x: Double) -> Double { x.isFinite ? x : 0 }
