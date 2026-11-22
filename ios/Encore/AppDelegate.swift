@@ -7,7 +7,7 @@ final class AppDelegate: UIResponder, UIApplicationDelegate {
                      didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         // UI tests: each fresh launch starts with an empty record
         if TestMode.on && UserDefaults.standard.bool(forKey: "EncoreFreshStart") { Diagnostics.shared.clear() }
-        Diagnostics.note("launch", Diagnostics.appLine + ", app " + RootViewController.stateName(application.applicationState))
+        Diagnostics.note("launch", Diagnostics.appLine)
         PlayerEngine.configureAudioSession()
         Diagnostics.note("session", Diagnostics.sessionLine())
         application.beginReceivingRemoteControlEvents()
@@ -38,6 +38,13 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
             Diagnostics.note("Home Screen menu", "\(item.localizedTitle), opening the app")
             DispatchQueue.main.async { _ = root.shortcut(item.type) }
         }
+    }
+
+    /// iOS let go of the app's screen (it can, for a scene in the background, to save resources). The player
+    /// lives with the screen, so this would stop the music: noted, to see whether it ever happens.
+    func sceneDidDisconnect(_ scene: UIScene) {
+        Diagnostics.note("app", "iOS disconnected its screen (scene)")
+        Diagnostics.shared.flush()
     }
 
     /// The Home Screen icon's menu (touch and hold the icon) while the app is running.

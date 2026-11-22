@@ -292,7 +292,8 @@ final class PlayerEngine: NSObject {
         nowPlaying()
     }
 
-    func stop() {
+    /// `from`: who asked (the page, a different address…), for Diagnostics.
+    func stop(from: String = "the app") {
         rejectedKey = ""
         mp3Keys.removeAll()
         wantsPlay = false
@@ -305,9 +306,10 @@ final class PlayerEngine: NSObject {
         pendingSeek = nil
         shownArt = nil
         MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
+        Diagnostics.note("stop", "asked by \(from): the player emptied, Encore's Now Playing info cleared")
         do {
             try AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
-            Diagnostics.note("session", "stopped (the player was stopped)")
+            Diagnostics.note("session", "stopped")
             PlayerEngine.sessionStarted = false
         } catch {
             Diagnostics.note("session", "couldn't stop: \(Diagnostics.describe(error))")
@@ -913,10 +915,10 @@ final class PlayerEngine: NSObject {
         let shown = MPNowPlayingInfoCenter.default().nowPlayingInfo?[MPMediaItemPropertyTitle] as? String
         if restored || shown != cur.item.title {
             // (after the session was set back, the song is published again so iOS takes the app as Now Playing)
-            NSLog("%@", "Encore: Now Playing showed \(shown ?? "nothing") for \(cur.item.title) (session set back: \(restored)); setting it again")
+            NSLog("%@", "Encore: Now Playing info had \(shown ?? "nothing") for \(cur.item.title) (session set back: \(restored)); setting it again")
             let was = shown.map { "\"\($0)\"" } ?? "nothing"
             let why = restored ? " (the session was set back)" : ""
-            Diagnostics.note("Now Playing", "showed \(was) for \"\(cur.item.title)\"\(why); set again")
+            Diagnostics.note("Now Playing", "Encore's info had \(was) for \"\(cur.item.title)\"\(why); set it again")
             nowPlayingRepairs += 1
             if restored { activateSession("the session was set back") }
             nowPlaying(reset: true)
@@ -1144,7 +1146,8 @@ final class PlayerEngine: NSObject {
         var what = "hint \(raw ?? 99)"
         if raw == AVAudioSession.SilenceSecondaryAudioHintType.begin.rawValue { what = "its music started" }
         if raw == AVAudioSession.SilenceSecondaryAudioHintType.end.rawValue { what = "its music stopped" }
-        Diagnostics.note("other app", what)
+        // (iOS only sends this while Encore is in front: no line doesn't mean nothing happened)
+        Diagnostics.note("other app", what + " (noticed only while Encore is in front)")
     }
 
     @objc private func mediaServicesReset(_ n: Notification) {
@@ -1213,7 +1216,8 @@ final class PlayerEngine: NSObject {
 
     // MARK: - for Diagnostics
 
-    /// The player in one line: its state, the song and where it is, what Now Playing shows.
+    /// The player in one line: its state, the song and where it is, and the Now Playing info Encore gave iOS
+    /// (not what Control Center shows: iOS doesn't tell apps that).
     var diagnosticsLine: String {
         var status = Diagnostics.name(player.timeControlStatus)
         if player.timeControlStatus == .waitingToPlayAtSpecifiedRate, let r = player.reasonForWaitingToPlay {
@@ -1221,11 +1225,12 @@ final class PlayerEngine: NSObject {
         }
         let song = current.map { "\"\($0.item.title)\"\($0.usingFallback ? " (MP3 version)" : "") at \(Diagnostics.clock(currentTime()))" } ?? "none"
         let np = MPNowPlayingInfoCenter.default().nowPlayingInfo
-        let shown = (np?[MPMediaItemPropertyTitle] as? String).map { "\"\($0)\"" } ?? "nothing"
+        let shown = (np?[MPMediaItemPropertyTitle] as? String).map { "\"\($0)\"" } ?? "none"
         let rate = (np?[MPNowPlayingInfoPropertyPlaybackRate] as? NSNumber).map { "\($0.doubleValue)" } ?? "-"
+        // (the time when it was last set: iOS moves the lock screen's clock on from there by the rate)
         let elapsed = (np?[MPNowPlayingInfoPropertyElapsedPlaybackTime] as? NSNumber).map { Diagnostics.clock($0.doubleValue) } ?? "-"
-        return "player \(status), wants to play \(Diagnostics.yn(wantsPlay)), song \(song); Now Playing shows \(shown) "
-            + "(rate \(rate), at \(elapsed), cover \(Diagnostics.yn(np?[MPMediaItemPropertyArtwork] != nil)))"
+        return "player \(status), wants to play \(Diagnostics.yn(wantsPlay)), song \(song); Encore's Now Playing info \(shown) "
+            + "(set at \(elapsed), rate \(rate), cover \(Diagnostics.yn(np?[MPMediaItemPropertyArtwork] != nil)))"
     }
 
     /// The lock screen's buttons that are switched on.

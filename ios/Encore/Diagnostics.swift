@@ -119,10 +119,10 @@ final class Diagnostics {
     // MARK: - what goes to the clipboard
 
     /// When it was copied, how things stand (`state`), then the latest `lastLines` lines.
-    func report(state: [String], lastLines: Int = 800, now: Date = Date()) -> String {
+    func report(state: [String], lastLines: Int = 600, now: Date = Date()) -> String {
         let l = all
         let shown = l.suffix(lastLines)
-        var out = ["Encore diagnostics, copied \(Diagnostics.longStamp.string(from: now)) (\(TimeZone.current.identifier))"]
+        var out = ["Encore diagnostics, copied \(Diagnostics.longStamp.string(from: now))"]
         out += state.map { Diagnostics.scrub($0) }
         out.append("--- what happened, oldest first (\(shown.count) of \(l.count) lines kept; month-day and the phone's time) ---")
         out += shown
@@ -145,9 +145,12 @@ final class Diagnostics {
         return f
     }()
 
-    /// Hides web addresses (the music server's carry the sign-in token) and IP addresses.
+    /// Hides web addresses (the music server's carry the sign-in token) and IP addresses, and keeps it to one
+    /// line (the file is read back line by line).
     static func scrub(_ s: String) -> String {
-        var t = s.replacingOccurrences(of: #"[A-Za-z][A-Za-z0-9+.\-]*://[^\s"'<>)\]]*"#, with: "<address>",
+        var t = s.replacingOccurrences(of: "\r\n", with: " / ").replacingOccurrences(of: "\n", with: " / ")
+            .replacingOccurrences(of: "\r", with: " / ")
+        t = t.replacingOccurrences(of: #"[A-Za-z][A-Za-z0-9+.\-]*://[^\s"'<>)\]]*"#, with: "<address>",
                                        options: .regularExpression)
         t = t.replacingOccurrences(of: #"\b\d{1,3}(\.\d{1,3}){3}(:\d+)?\b"#, with: "<address>", options: .regularExpression)
         return t

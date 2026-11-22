@@ -100,7 +100,7 @@ final class Bridge: NSObject, WKScriptMessageHandler, PageLink {
         case "seek":
             engine.seek(Item.number(body["t"]) ?? 0)
         case "stop":
-            engine.stop()
+            engine.stop(from: "the page")
             save()
         case "upcoming":
             engine.upcoming(key: body["key"] as? String ?? "", req: Int(Item.number(body["req"]) ?? 0),
@@ -204,7 +204,7 @@ final class Bridge: NSObject, WKScriptMessageHandler, PageLink {
 
     /// A different address: the news was for the old page, and the player stops.
     func forgetAll() {
-        engine.stop()
+        engine.stop(from: "a change to a different address")
         log = EventLog()
         save()
         pageReady = false

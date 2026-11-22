@@ -318,6 +318,14 @@ final class DiagnosticsTests: XCTestCase {
         XCTAssertTrue(line.hasSuffix("song failed: <address> failed; <address> and <address> too"), line)
     }
 
+    func testANoteStaysOneLine() {
+        let d = Diagnostics(file: file)
+        d.add("song failed", "first line\nsecond line\r\nthird")
+        d.flush()
+        XCTAssertEqual(Diagnostics(file: file).all.count, 1)
+        XCTAssertTrue(d.all[0].hasSuffix("song failed: first line / second line / third"), d.all[0])
+    }
+
     func testTheReportHasTheStateThenTheLatestLines() {
         let d = Diagnostics(file: nil)
         for i in 1...10 { d.add("event", "number \(i)") }

@@ -439,13 +439,16 @@ final class IntegrationTests: XCTestCase {
         print("ENCORE-DIAG copied (test 9):\n" + text)
         for want in ["Encore diagnostics, copied", "launch: Encore", "page: loaded", "song: \"Song 4\"", "player: playing",
                      "app: in the background", "app: in front", "session: started", "Audio session: Playback",
-                     "Now Playing shows \"", "Lock screen buttons: play on"] {
+                     "Encore's Now Playing info \"Song ", "(set at ", "Lock screen buttons: play on"] {
             XCTAssertTrue(text.contains(want), "the diagnostics have: \(want)")
         }
         XCTAssertFalse(text.contains("built from ?"), "the commit it was built from")
-        for never in ["://", "127.0.0.1", Self.password, "u=\(Self.user)", "p=", "t=", "s="] {
+        for never in ["://", "127.0.0.1", Self.password, "u=\(Self.user)"] {
             XCTAssertFalse(text.contains(never), "the diagnostics hold no \(never)")
         }
+        XCTAssertNil(text.range(of: #"[?&][a-z]+="#, options: .regularExpression), "nothing like an address's query (sign-in token)")
+        let launchLine = text.split(separator: "\n").first { $0.contains(" launch: Encore") } ?? ""
+        XCTAssertFalse(launchLine.contains("background"), "a launch isn't noted as the app in the background: \(launchLine)")
     }
 
     /// Copy Diagnostics from the Home Screen: touch and hold Encore's icon, then the item in its menu. Once with
@@ -487,6 +490,9 @@ final class IntegrationTests: XCTestCase {
     /// Copy Diagnostics in its menu.
     private func useIconMenu(_ when: String) {
         let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
+        // (pressed again on the Home Screen, Home goes to its first page: the search below swipes on from there)
+        XCUIDevice.shared.press(.home)
+        sleep(1)
         XCUIDevice.shared.press(.home)
         let icon = springboard.icons["Encore"].firstMatch
         _ = icon.waitForExistence(timeout: 10)

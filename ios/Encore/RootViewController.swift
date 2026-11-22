@@ -222,7 +222,7 @@ final class RootViewController: UIViewController, WKNavigationDelegate, WKUIDele
 
     @objc private func resigningActive() {
         // (Control Center or Notification Center pulled down, the app switcher, a call coming in…)
-        Diagnostics.note("app", "not in front any more")
+        Diagnostics.note("app", "not in front any more; " + engine.diagnosticsLine + "; " + Diagnostics.sessionLine())
         bridge.save()
         engine.saveState()
     }
@@ -243,7 +243,8 @@ final class RootViewController: UIViewController, WKNavigationDelegate, WKUIDele
     }
 
     @objc private func lowMemory() { Diagnostics.note("app", "iOS says memory is low") }
-    @objc private func locked() { Diagnostics.note("phone", "locked") }
+    // (iOS only says so with a passcode set, and the lock can be noticed a little late)
+    @objc private func locked() { Diagnostics.note("phone", "locked (as far as iOS says)") }
     @objc private func unlocked() { Diagnostics.note("phone", "unlocked") }
 
     static func stateName(_ s: UIApplication.State) -> String {
@@ -291,7 +292,7 @@ final class RootViewController: UIViewController, WKNavigationDelegate, WKUIDele
         }
         copiedAlertWaiting = false
         let a = UIAlertController(title: "Diagnostics copied",
-                                  message: "Paste them into your chat with Claude. They show what Encore and iOS did with the sound lately, and how things stand now. No addresses or passwords are in them.",
+                                  message: "Paste them into your chat with Claude. They show what Encore and iOS did with the sound lately, and how things stand now. Web and IP addresses are left out.",
                                   preferredStyle: .alert)
         a.addAction(UIAlertAction(title: "OK", style: .default))
         var top: UIViewController = self
