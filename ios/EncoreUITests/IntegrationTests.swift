@@ -380,6 +380,45 @@ final class IntegrationTests: XCTestCase {
         XCTAssertLessThanOrEqual((n["stallEnds"] as? Int ?? 9) + (n["retries"] as? Int ?? 9), 1,
                                  "only the first song (not made in advance) could have waited at its end or broken off")
     }
+
+    /// iOS only shows the app in Control Center (Now Playing) while its audio session is the music kind that
+    /// doesn't mix with others: it has to stay that way through the page loading, playing, a reload of the page
+    /// and the app going to the background and back.
+    func test9AudioSessionStaysMusic() {
+        launch(fresh: true)
+        let ids = signIn()
+        let s4 = ids["Song 4"]!
+        func checkSession(_ when: String) {
+            let n = native()
+            XCTAssertEqual(n["category"] as? String, "AVAudioSessionCategoryPlayback", "category \(when)")
+            XCTAssertEqual(n["mixes"] as? Bool, false, "mixes with others \(when)")
+            print("ENCORE-DIAG \(when): category=\(n["category"] ?? "?") mixes=\(n["mixes"] ?? "?") restores=\(n["sessionRestores"] ?? "?") repairs=\(n["nowPlayingRepairs"] ?? "?")")
+        }
+        checkSession("after sign-in")
+        js("__t.play(3, 3)")
+        waitFor(20, "Song 4 playing") { native()["key"] as? String == s4 && (native()["t"] as? Double ?? 0) > 0.5 }
+        checkSession("while playing")
+        XCTAssertEqual(native()["nowPlaying"] as? String, "Song 4")
+        // the page reloads (as after iOS ends the web view's process in the background); the 20-second songs
+        // may move on meanwhile
+        js("(setTimeout(() => location.reload(), 300), 'reloading')")
+        sleep(2)
+        waitFor(30, "the reloaded page says hello and follows") {
+            native()["pageReady"] as? Bool == true && page()["cur"] as? String == native()["key"] as? String
+        }
+        XCTAssertEqual(native()["playing"] as? Bool, true, "the music played on through the reload")
+        checkSession("after the page reloaded")
+        XCUIDevice.shared.press(.home)
+        XCTAssertTrue(app.wait(for: .runningBackground, timeout: 10))
+        sleep(3)
+        app.activate()
+        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 10))
+        waitFor(10, "back in front") { native()["appState"] as? String == "active" }
+        checkSession("after the background")
+        let n = native()
+        XCTAssertEqual(n["nowPlaying"] as? String, n["title"] as? String, "Now Playing shows the song that's playing")
+        XCTAssertNotEqual(n["title"] as? String ?? "", "")
+    }
 }
 
 /// A value filled in by a network callback (the closure can't change a local variable of the caller).

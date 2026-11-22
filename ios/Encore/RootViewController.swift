@@ -202,6 +202,7 @@ final class RootViewController: UIViewController, WKNavigationDelegate, WKUIDele
 
     @objc private func becameActive() {
         bridge.appActive()
+        engine.appStateChanged()
     }
 
     @objc private func resigningActive() {
@@ -212,6 +213,7 @@ final class RootViewController: UIViewController, WKNavigationDelegate, WKUIDele
     @objc private func wentToBackground() {
         bridge.appInBackground()
         engine.saveState()
+        engine.appStateChanged()
     }
 
     // MARK: - WKNavigationDelegate

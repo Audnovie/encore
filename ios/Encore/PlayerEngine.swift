@@ -75,6 +75,11 @@ final class PlayerEngine: NSObject {
     private var mp3Keys = Set<String>()
     /// gets Navidrome's MP3 versions made before AVPlayer asks for them
     let warmer = TranscodeWarmer()
+    /// the player was playing at the last play-state change (see playStateChanged)
+    private var wasPlaying = false
+    private var lastNowPlayingCheck: CFTimeInterval = 0
+    /// times Now Playing had to be set again (for the test panel)
+    private(set) var nowPlayingRepairs = 0
     /// for the test panel: songs counted as ended because they stuck just before the end, second tries after a
     /// broken connection, and switches of the playing song to its MP3 version
     private(set) var stallEnds = 0
@@ -135,8 +140,33 @@ final class PlayerEngine: NSObject {
         }
     }
 
+    /// Times the audio session was found changed (another part of the app, such as the web view, setting its
+    /// own category) and set back (for the test panel).
+    static var sessionRestores = 0
+
+    /// iOS only makes an app the one in Control Center and on the lock screen ("Now Playing") while its audio
+    /// is the music kind that doesn't mix with others. If anything else in the app changed that (to a mixing
+    /// category such as Ambient), the music would keep playing but iOS would show "Not Playing" and send the
+    /// Play button to another app. Set it back.
+    static func keepSessionOurs() {
+        let s = AVAudioSession.sharedInstance()
+        if s.category == .playback && !s.categoryOptions.contains(.mixWithOthers) { return }
+        NSLog("%@", "Encore: the audio session was changed to \(s.category.rawValue) (options \(s.categoryOptions.rawValue)); setting it back")
+        sessionRestores += 1
+        configureAudioSession()
+    }
+
     private func activateSession() {
+        PlayerEngine.keepSessionOurs()
         do { try AVAudioSession.sharedInstance().setActive(true) } catch { NSLog("%@", "Encore: couldn't start audio: \(error)") }
+    }
+
+    /// The app came to the front or went to the background: make sure iOS still has the app's music as
+    /// Now Playing (see keepSessionOurs), with everything about the song.
+    func appStateChanged() {
+        guard current != nil else { return }
+        if wantsPlay { activateSession() }
+        nowPlaying(reset: true)
     }
 
     // MARK: - what the page asks for
@@ -786,6 +816,21 @@ final class PlayerEngine: NSObject {
         }
         if now - lastTimeSent >= 1 { sendTime() }
         if now - lastSaved >= 15 { saveTime() }
+        if now - lastNowPlayingCheck >= 5 { checkNowPlaying() }
+    }
+
+    /// Every 5 seconds while a song is on: Now Playing still shows it (nothing else in the app cleared or
+    /// replaced it), and the audio session is still the kind iOS shows there (see keepSessionOurs).
+    private func checkNowPlaying() {
+        lastNowPlayingCheck = CACurrentMediaTime()
+        guard let cur = current else { return }
+        if wantsPlay { PlayerEngine.keepSessionOurs() }
+        let shown = MPNowPlayingInfoCenter.default().nowPlayingInfo?[MPMediaItemPropertyTitle] as? String
+        if shown != cur.item.title {
+            NSLog("%@", "Encore: Now Playing showed \(shown ?? "nothing") instead of \(cur.item.title); setting it again")
+            nowPlayingRepairs += 1
+            nowPlaying(reset: true)
+        }
     }
 
     private func scrobble(_ item: Item, submission: Bool) {
@@ -838,7 +883,10 @@ final class PlayerEngine: NSObject {
 
     private func playStateChanged() {
         sendState()
-        nowPlaying()
+        let playingNow = player.timeControlStatus == .playing
+        // when the music starts, everything about the song again (the system may have dropped it)
+        nowPlaying(reset: playingNow && !wasPlaying)
+        wasPlaying = playingNow
         checkStallAtEnd()
     }
 
@@ -946,6 +994,19 @@ final class PlayerEngine: NSObject {
     @objc private func routeChanged(_ n: Notification) {
         guard let raw = n.userInfo?[AVAudioSessionRouteChangeReasonKey] as? UInt,
               let reason = AVAudioSession.RouteChangeReason(rawValue: raw) else { return }
+        if reason == .categoryChange {
+            // something set another category (see keepSessionOurs); the app's own change comes here too and is
+            // left alone
+            DispatchQueue.main.async { [weak self] in
+                guard let self = self else { return }
+                let before = PlayerEngine.sessionRestores
+                PlayerEngine.keepSessionOurs()
+                if PlayerEngine.sessionRestores != before && self.current != nil {
+                    if self.wantsPlay { self.activateSession() }
+                    self.nowPlaying(reset: true)
+                }
+            }
+        }
         if reason == .oldDeviceUnavailable {
             // headphones unplugged or disconnected: pause, as the Music app does
             DispatchQueue.main.async { [weak self] in self?.pause() }
@@ -997,6 +1058,10 @@ final class PlayerEngine: NSObject {
             "preload": preload?.item.key ?? "",
             "errors": errorsInARow,
             "lastError": lastErrorReason,
+            "category": AVAudioSession.sharedInstance().category.rawValue,
+            "mixes": AVAudioSession.sharedInstance().categoryOptions.contains(.mixWithOthers),
+            "sessionRestores": PlayerEngine.sessionRestores,
+            "nowPlayingRepairs": nowPlayingRepairs,
             "stallEnds": stallEnds,
             "retries": retriesDone,
             "mp3Switches": mp3Switches,
