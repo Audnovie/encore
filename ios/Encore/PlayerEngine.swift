@@ -824,11 +824,15 @@ final class PlayerEngine: NSObject {
     private func checkNowPlaying() {
         lastNowPlayingCheck = CACurrentMediaTime()
         guard let cur = current else { return }
+        let before = PlayerEngine.sessionRestores
         if wantsPlay { PlayerEngine.keepSessionOurs() }
+        let restored = PlayerEngine.sessionRestores != before
         let shown = MPNowPlayingInfoCenter.default().nowPlayingInfo?[MPMediaItemPropertyTitle] as? String
-        if shown != cur.item.title {
-            NSLog("%@", "Encore: Now Playing showed \(shown ?? "nothing") instead of \(cur.item.title); setting it again")
+        if restored || shown != cur.item.title {
+            // (after the session was set back, the song is published again so iOS takes the app as Now Playing)
+            NSLog("%@", "Encore: Now Playing showed \(shown ?? "nothing") for \(cur.item.title) (session set back: \(restored)); setting it again")
             nowPlayingRepairs += 1
+            if restored { activateSession() }
             nowPlaying(reset: true)
         }
     }
