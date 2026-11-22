@@ -418,6 +418,91 @@ final class IntegrationTests: XCTestCase {
         let n = native()
         XCTAssertEqual(n["nowPlaying"] as? String, n["title"] as? String, "Now Playing shows the song that's playing")
         XCTAssertNotEqual(n["title"] as? String ?? "", "")
+        // Going to the background and back while playing doesn't start the session again (only after it had to be
+        // set back). A song starting meanwhile can (the 20-second songs may move on).
+        let starts = n["activations"] as? Int ?? -1
+        XCUIDevice.shared.press(.home)
+        XCTAssertTrue(app.wait(for: .runningBackground, timeout: 10))
+        app.activate()
+        waitFor(10, "back in front again") { native()["appState"] as? String == "active" }
+        let after = native()
+        let moved = after["key"] as? String != n["key"] as? String
+        XCTAssertLessThanOrEqual((after["activations"] as? Int ?? 99) - starts, moved ? 1 : 0,
+                                 "no session start for going to the background and back (moved on: \(moved))")
+
+        // Copy Diagnostics (the same as from the Home Screen icon's menu): what happened, and no addresses
+        app.buttons["testDiag"].tap()
+        let alert = app.alerts["Diagnostics copied"]
+        XCTAssertTrue(alert.waitForExistence(timeout: 5), "the app says it copied them")
+        alert.buttons["OK"].tap()
+        let text = app.staticTexts["testCopied"].label
+        print("ENCORE-DIAG copied (test 9):\n" + text)
+        for want in ["Encore diagnostics, copied", "launch: Encore", "page: loaded", "song: \"Song 4\"", "player: playing",
+                     "app: in the background", "app: in front", "session: started", "Audio session: Playback",
+                     "Now Playing shows \"", "Lock screen buttons: play on"] {
+            XCTAssertTrue(text.contains(want), "the diagnostics have: \(want)")
+        }
+        XCTAssertFalse(text.contains("built from ?"), "the commit it was built from")
+        for never in ["://", "127.0.0.1", Self.password, "u=\(Self.user)", "p=", "t=", "s="] {
+            XCTAssertFalse(text.contains(never), "the diagnostics hold no \(never)")
+        }
+    }
+
+    /// Copy Diagnostics from the Home Screen: touch and hold Encore's icon, then the item in its menu. Once with
+    /// the app running (playing, in the background), once with it closed.
+    func testZCopyDiagnosticsFromTheHomeScreen() {
+        launch(fresh: true)
+        let ids = signIn()
+        let s4 = ids["Song 4"]!
+        js("__t.play(3, 3)")
+        waitFor(20, "Song 4 playing") { native()["key"] as? String == s4 && (native()["t"] as? Double ?? 0) > 0.5 }
+        let copies = native()["copies"] as? Int ?? -1
+        XCUIDevice.shared.press(.home)
+        XCTAssertTrue(app.wait(for: .runningBackground, timeout: 10))
+        useIconMenu("running")
+        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 15), "Encore came to the front")
+        let alert = app.alerts["Diagnostics copied"]
+        XCTAssertTrue(alert.waitForExistence(timeout: 15), "the app says it copied them")
+        shot("copied-running")
+        alert.buttons["OK"].tap()
+        waitFor(10, "copied once") { native()["copies"] as? Int == copies + 1 }
+        let text = app.staticTexts["testCopied"].label
+        XCTAssertTrue(text.hasPrefix("Encore diagnostics, copied"))
+        XCTAssertTrue(text.contains("Home Screen menu: Copy Diagnostics"), "the record says where it came from")
+        XCTAssertTrue(text.contains("app: in the background"))
+        XCTAssertFalse(text.contains("://"))
+
+        // with the app closed: iOS opens it, and it copies them once its screen is there
+        app.terminate()
+        XCTAssertTrue(app.wait(for: .notRunning, timeout: 10))
+        useIconMenu("closed")
+        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 20), "Encore opened")
+        let again = app.alerts["Diagnostics copied"]
+        XCTAssertTrue(again.waitForExistence(timeout: 20), "the app says it copied them")
+        shot("copied-closed")
+        again.buttons["OK"].tap()
+    }
+
+    /// From the Home Screen: touch and hold Encore's icon (looking through the Home Screen's pages for it), then
+    /// Copy Diagnostics in its menu.
+    private func useIconMenu(_ when: String) {
+        let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
+        XCUIDevice.shared.press(.home)
+        let icon = springboard.icons["Encore"].firstMatch
+        _ = icon.waitForExistence(timeout: 10)
+        var swipes = 0
+        while !(icon.exists && icon.isHittable) && swipes < 5 {
+            springboard.swipeLeft()
+            sleep(1)
+            swipes += 1
+        }
+        shot("home-screen-\(when)")
+        XCTAssertTrue(icon.exists && icon.isHittable, "Encore's icon on the Home Screen (after \(swipes) swipes)")
+        icon.press(forDuration: 1.2)
+        let item = springboard.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Copy Diagnostics")).firstMatch
+        XCTAssertTrue(item.waitForExistence(timeout: 10), "Copy Diagnostics in the icon's menu")
+        shot("icon-menu-\(when)")
+        item.tap()
     }
 }
 

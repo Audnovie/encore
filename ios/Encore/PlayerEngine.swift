@@ -85,7 +85,11 @@ final class PlayerEngine: NSObject {
     private(set) var stallEnds = 0
     private(set) var retriesDone = 0
     private(set) var mp3Switches = 0
-
+    /// the cover shown for the current song, so setting Now Playing again keeps it (the cache can lose it)
+    private var shownArt: (key: String, image: UIImage)?
+    /// for Diagnostics: the last player state noted, and when "still playing" was last noted
+    private var statusNoted = ""
+    private var lastHeartbeat: CFTimeInterval = 0
 
     override init() {
         super.init()
@@ -96,6 +100,8 @@ final class PlayerEngine: NSObject {
         nc.addObserver(self, selector: #selector(interrupted(_:)), name: AVAudioSession.interruptionNotification, object: nil)
         nc.addObserver(self, selector: #selector(routeChanged(_:)), name: AVAudioSession.routeChangeNotification, object: nil)
         nc.addObserver(self, selector: #selector(mediaServicesReset(_:)), name: AVAudioSession.mediaServicesWereResetNotification, object: nil)
+        nc.addObserver(self, selector: #selector(mediaServicesLost(_:)), name: AVAudioSession.mediaServicesWereLostNotification, object: nil)
+        nc.addObserver(self, selector: #selector(otherAppHint(_:)), name: AVAudioSession.silenceSecondaryAudioHintNotification, object: nil)
         setUpRemoteCommands()
     }
 
@@ -136,36 +142,67 @@ final class PlayerEngine: NSObject {
         do {
             try s.setCategory(.playback, mode: .default, policy: .longFormAudio, options: [])
         } catch {
-            try? s.setCategory(.playback)
+            // (noted once a minute: keepSessionOurs can try this every 5 seconds)
+            Diagnostics.noteRarely("session-long-form", every: 60, "session", "couldn't set the long-form music kind: \(Diagnostics.describe(error))")
+            do { try s.setCategory(.playback) } catch {
+                Diagnostics.noteRarely("session-music", every: 60, "session", "couldn't set the music kind: \(Diagnostics.describe(error))")
+            }
         }
     }
 
     /// Times the audio session was found changed (another part of the app, such as the web view, setting its
     /// own category) and set back (for the test panel).
     static var sessionRestores = 0
+    /// Times the app asked iOS to start its audio session (for the tests).
+    private(set) static var activations = 0
+    /// whether the app's audio session is started, as far as the app knows (for Diagnostics: only the changes
+    /// are noted)
+    private static var sessionStarted = false
 
     /// iOS only makes an app the one in Control Center and on the lock screen ("Now Playing") while its audio
     /// is the music kind that doesn't mix with others. If anything else in the app changed that (to a mixing
     /// category such as Ambient), the music would keep playing but iOS would show "Not Playing" and send the
-    /// Play button to another app. Set it back.
-    static func keepSessionOurs() {
+    /// Play button to another app. Set it back. True when it was changed and is now set back.
+    @discardableResult
+    static func keepSessionOurs() -> Bool {
         let s = AVAudioSession.sharedInstance()
-        if s.category == .playback && !s.categoryOptions.contains(.mixWithOthers) { return }
-        NSLog("%@", "Encore: the audio session was changed to \(s.category.rawValue) (options \(s.categoryOptions.rawValue)); setting it back")
-        sessionRestores += 1
+        if s.category == .playback && !s.categoryOptions.contains(.mixWithOthers) { return false }
+        let was = "\(s.category.rawValue) (options \(s.categoryOptions.rawValue))"
+        NSLog("%@", "Encore: the audio session was changed to \(was); setting it back")
         configureAudioSession()
+        let ok = s.category == .playback && !s.categoryOptions.contains(.mixWithOthers)
+        if ok {
+            sessionRestores += 1
+            Diagnostics.note("session", "was changed to \(was); set back to music")
+        } else {
+            // (this is tried again every 5 seconds while playing: noted once a minute)
+            Diagnostics.noteRarely("session-not-set-back", every: 60, "session", "was changed to \(was); couldn't set it back")
+        }
+        return ok
     }
 
-    private func activateSession() {
+    /// Starts the app's audio session (`why`: for Diagnostics).
+    private func activateSession(_ why: String) {
         PlayerEngine.keepSessionOurs()
-        do { try AVAudioSession.sharedInstance().setActive(true) } catch { NSLog("%@", "Encore: couldn't start audio: \(error)") }
+        PlayerEngine.activations += 1
+        do {
+            try AVAudioSession.sharedInstance().setActive(true)
+            if !PlayerEngine.sessionStarted { Diagnostics.note("session", "started (\(why))") }
+            PlayerEngine.sessionStarted = true
+        } catch {
+            NSLog("%@", "Encore: couldn't start audio: \(error)")
+            Diagnostics.note("session", "couldn't start (\(why)): \(Diagnostics.describe(error))")
+        }
     }
 
     /// The app came to the front or went to the background: make sure iOS still has the app's music as
     /// Now Playing (see keepSessionOurs), with everything about the song.
     func appStateChanged() {
         guard current != nil else { return }
-        if wantsPlay { activateSession() }
+        // Only while the music is really going. After a call or another app took the sound, the player is
+        // paused but still wants to play (to carry on if iOS says so): starting the session then would silence
+        // the other app while Encore stays paused.
+        if player.timeControlStatus != .paused, PlayerEngine.keepSessionOurs() { activateSession("the session was set back") }
         nowPlaying(reset: true)
     }
 
@@ -179,6 +216,7 @@ final class PlayerEngine: NSObject {
         rejectedKey = ""
         put(item, at: startAt, play: autoplay)
         currentFromPage = true
+        noteSong("from the page\(autoplay ? "" : ", paused")\(restore ? ", its saved place" : "")")
         songChanged()
         markStartedLate(startAt)
         fillPreload()
@@ -202,7 +240,9 @@ final class PlayerEngine: NSObject {
         saveState()
     }
 
-    func play() {
+    /// `from`: who asked (the page, the lock screen…), for Diagnostics.
+    func play(from: String = "the app") {
+        Diagnostics.note("play", "asked by \(from)")
         guard let cur = current else {
             // nothing it can play (the page asked for something it couldn't): the page shows it paused
             if !rejectedKey.isEmpty {
@@ -211,7 +251,7 @@ final class PlayerEngine: NSObject {
             return
         }
         wantsPlay = true
-        activateSession()
+        activateSession("play")
         if cur.playerItem.status == .failed || cur.failureHandled || cur.didEnd || player.currentItem !== cur.playerItem {
             // a song that wouldn't load, the last one after it ended, or the player moved off it after a failure:
             // start it again from a fresh copy
@@ -224,7 +264,8 @@ final class PlayerEngine: NSObject {
         nowPlaying()
     }
 
-    func pause() {
+    func pause(from: String = "the app") {
+        Diagnostics.note("pause", "asked by \(from)")
         wantsPlay = false
         player.pause()
         sendState()
@@ -262,8 +303,15 @@ final class PlayerEngine: NSObject {
         currentFromPage = false
         queue.stop()
         pendingSeek = nil
+        shownArt = nil
         MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
-        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+        do {
+            try AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+            Diagnostics.note("session", "stopped (the player was stopped)")
+            PlayerEngine.sessionStarted = false
+        } catch {
+            Diagnostics.note("session", "couldn't stop: \(Diagnostics.describe(error))")
+        }
         saveState()
     }
 
@@ -324,6 +372,7 @@ final class PlayerEngine: NSObject {
         queue.resume(current: s.current, ahead: s.ahead, back: s.back, repeatOne: s.repeatOne)
         put(s.current, fallback: s.fallback, at: t, play: false)
         currentFromPage = false
+        noteSong("where the app was when it was closed, paused at \(Diagnostics.clock(t))")
         songChanged()
         markStartedLate(t)
         fillPreload()
@@ -334,37 +383,51 @@ final class PlayerEngine: NSObject {
 
     private func setUpRemoteCommands() {
         let c = MPRemoteCommandCenter.shared()
+        // ("the lock screen": also Control Center, headphones, the car and Siri; iOS doesn't say which)
         c.playCommand.addTarget { [weak self] _ in
-            guard let self = self, self.current != nil else { return .noSuchContent }
-            self.play()
+            guard let self = self, self.current != nil else {
+                Diagnostics.note("lock screen", "Play, with nothing to play")
+                return .noSuchContent
+            }
+            self.play(from: "the lock screen")
             return .success
         }
         c.pauseCommand.addTarget { [weak self] _ in
-            self?.pause()
+            self?.pause(from: "the lock screen")
             return .success
         }
         c.togglePlayPauseCommand.addTarget { [weak self] _ in
-            guard let self = self, self.current != nil else { return .noSuchContent }
+            guard let self = self, self.current != nil else {
+                Diagnostics.note("lock screen", "Play/Pause, with nothing to play")
+                return .noSuchContent
+            }
             // by what's really happening: after another app took the sound, the first press plays
-            if self.player.timeControlStatus == .paused { self.play() } else { self.pause() }
+            if self.player.timeControlStatus == .paused {
+                self.play(from: "the lock screen (play/pause)")
+            } else {
+                self.pause(from: "the lock screen (play/pause)")
+            }
             return .success
         }
         c.stopCommand.addTarget { [weak self] _ in
-            self?.pause()
+            self?.pause(from: "the lock screen (stop)")
             return .success
         }
         c.nextTrackCommand.addTarget { [weak self] _ in
             guard let self = self, self.current != nil else { return .noSuchContent }
+            Diagnostics.note("lock screen", "Next")
             self.remoteNext()
             return .success
         }
         c.previousTrackCommand.addTarget { [weak self] _ in
             guard let self = self, self.current != nil else { return .noSuchContent }
+            Diagnostics.note("lock screen", "Back")
             self.remotePrevious()
             return .success
         }
         c.changePlaybackPositionCommand.addTarget { [weak self] e in
             guard let self = self, let e = e as? MPChangePlaybackPositionCommandEvent else { return .commandFailed }
+            Diagnostics.note("lock screen", "moved to \(Diagnostics.clock(e.positionTime))")
             self.seek(e.positionTime)
             return .success
         }
@@ -409,11 +472,17 @@ final class PlayerEngine: NSObject {
         updateActionAtEnd()
         wantsPlay = play
         if play {
-            activateSession()
+            activateSession("a song starting")
             player.play()
         } else {
             player.pause()
         }
+    }
+
+    /// For Diagnostics: the song the player is on now, and why.
+    private func noteSong(_ why: String) {
+        guard let cur = current else { return }
+        Diagnostics.note("song", "\"\(cur.item.title)\"\(cur.usingFallback ? " (MP3 version)" : "") \(why)")
     }
 
     /// A new song (or the same one again) started: its play hasn't been registered yet.
@@ -450,13 +519,14 @@ final class PlayerEngine: NSObject {
             if player.currentItem !== pre.playerItem { player.advanceToNextItem() }
             wantsPlay = play
             if play {
-                activateSession()
+                activateSession("moving on")
                 player.play()
             }
         } else {
             put(next, play: play)
         }
         currentFromPage = false
+        noteSong("(moved on: \(m.rawValue))")
         songChanged()
         fillPreload()
         record(["type": "advance", "from": from.key, "to": next.key, "reason": m.rawValue, "song": next.songInfo])
@@ -487,7 +557,7 @@ final class PlayerEngine: NSObject {
             // normally it's playing already; when the lined-up song was swapped for its MP3 version just as the
             // last one ended (put last in an empty queue), it may need starting
             if pre.insertedLast && wantsPlay && player.rate == 0 {
-                activateSession()
+                activateSession("moving on")
                 player.play()
             }
         } else {
@@ -495,6 +565,7 @@ final class PlayerEngine: NSObject {
             put(next, play: wantsPlay)
         }
         currentFromPage = false
+        noteSong("(moved on: ended)")
         songChanged()
         fillPreload()
         record(["type": "advance", "from": from.key, "to": next.key, "reason": QueueState.Move.ended.rawValue, "song": next.songInfo])
@@ -507,6 +578,7 @@ final class PlayerEngine: NSObject {
         let from = cur.item
         put(from, play: false)
         currentFromPage = false
+        noteSong("again, paused at its start (the end of the list)")
         songChanged()
         record(["type": "advance", "from": from.key, "to": NSNull(), "reason": QueueState.Move.ended.rawValue])
         nowPlaying(reset: true)
@@ -576,6 +648,7 @@ final class PlayerEngine: NSObject {
         // on the song: if Repeat One was switched on just as it ended, after AVQueuePlayer had already moved on
         // to the next one, that's a normal end.
         if queue.repeatOne && !cur.item.isRadio && player.currentItem === cur.playerItem {
+            noteSong("again (repeat one)")
             songChanged()
             cur.playerItem.seek(to: .zero, toleranceBefore: .zero, toleranceAfter: .zero) { [weak self] _ in
                 DispatchQueue.main.async {
@@ -671,6 +744,8 @@ final class PlayerEngine: NSObject {
             let retry = network && !e.retried
             // (not the MP3 version after a broken connection: it's on the same server)
             let toMP3 = !network && !e.usingFallback && e.item.fallback != nil
+            let then = retry ? "; lining it up again" : toMP3 ? "; lining up its MP3 version" : ""
+            Diagnostics.note("next song failed", "\"\(e.item.title)\": \(Diagnostics.describe(error))\(then)")
             if toMP3 { mp3Keys.insert(e.item.key) }
             if retry { retriesDone += 1 }
             if retry || toMP3, let cur = current {
@@ -682,6 +757,8 @@ final class PlayerEngine: NSObject {
         guard e === current, !e.failureHandled else { return }
         e.failureHandled = true
         NSLog("%@", "Encore: couldn't play \(e.item.key): \(String(describing: error))")
+        Diagnostics.note("song failed", "\"\(e.item.title)\" at \(Diagnostics.clock(currentTime())): \(Diagnostics.describe(error))"
+                         + "; wants to play \(Diagnostics.yn(wantsPlay)), tried again already \(Diagnostics.yn(e.retried))")
         if !wantsPlay {
             // nothing was playing (loaded paused, say after the app was reopened away from home): stay on it
             // quietly; Play tries again
@@ -697,6 +774,7 @@ final class PlayerEngine: NSObject {
             retriesDone += 1
             put(e.item, fallback: e.usingFallback, at: e.item.isRadio ? 0 : currentTime(), play: true)
             current?.retried = true
+            noteSong("tried again after a broken connection")
             fillPreload()
             return
         }
@@ -746,6 +824,7 @@ final class PlayerEngine: NSObject {
         let go: () -> Void = { [weak self] in
             guard let self = self, stillWanted() else { return }
             self.put(e.item, fallback: true, at: t, play: true)
+            self.noteSong("switched to the server's MP3 version (the phone can't play the original)")
             self.fillPreload()
         }
         if !TranscodeWarmer.isTranscode(f) || warmer.isSettled(f) {
@@ -817,6 +896,11 @@ final class PlayerEngine: NSObject {
         if now - lastTimeSent >= 1 { sendTime() }
         if now - lastSaved >= 15 { saveTime() }
         if now - lastNowPlayingCheck >= 5 { checkNowPlaying() }
+        if player.timeControlStatus == .playing && now - lastHeartbeat >= 600 {
+            // every 10 minutes while playing, how things stand (so the record shows when all was still well)
+            lastHeartbeat = now
+            Diagnostics.note("still playing", diagnosticsLine + "; " + Diagnostics.sessionLine())
+        }
     }
 
     /// Every 5 seconds while a song is on: Now Playing still shows it (nothing else in the app cleared or
@@ -824,15 +908,17 @@ final class PlayerEngine: NSObject {
     private func checkNowPlaying() {
         lastNowPlayingCheck = CACurrentMediaTime()
         guard let cur = current else { return }
-        let before = PlayerEngine.sessionRestores
-        if wantsPlay { PlayerEngine.keepSessionOurs() }
-        let restored = PlayerEngine.sessionRestores != before
+        // (only while the music is going: see appStateChanged)
+        let restored = player.timeControlStatus != .paused && PlayerEngine.keepSessionOurs()
         let shown = MPNowPlayingInfoCenter.default().nowPlayingInfo?[MPMediaItemPropertyTitle] as? String
         if restored || shown != cur.item.title {
             // (after the session was set back, the song is published again so iOS takes the app as Now Playing)
             NSLog("%@", "Encore: Now Playing showed \(shown ?? "nothing") for \(cur.item.title) (session set back: \(restored)); setting it again")
+            let was = shown.map { "\"\($0)\"" } ?? "nothing"
+            let why = restored ? " (the session was set back)" : ""
+            Diagnostics.note("Now Playing", "showed \(was) for \"\(cur.item.title)\"\(why); set again")
             nowPlayingRepairs += 1
-            if restored { activateSession() }
+            if restored { activateSession("the session was set back") }
             nowPlaying(reset: true)
         }
     }
@@ -887,6 +973,15 @@ final class PlayerEngine: NSObject {
 
     private func playStateChanged() {
         sendState()
+        var status = Diagnostics.name(player.timeControlStatus)
+        if player.timeControlStatus == .waitingToPlayAtSpecifiedRate, let r = player.reasonForWaitingToPlay {
+            status += " (\(Diagnostics.name(r)))"
+        }
+        if status != statusNoted {
+            statusNoted = status
+            let at = current.map { " at \(Diagnostics.clock(currentTime())) of \"\($0.item.title)\"" } ?? ""
+            Diagnostics.note("player", "\(status)\(at)")
+        }
         let playingNow = player.timeControlStatus == .playing
         // when the music starts, everything about the song again (the system may have dropped it)
         nowPlaying(reset: playingNow && !wasPlaying)
@@ -917,9 +1012,11 @@ final class PlayerEngine: NSObject {
     /// As ended(), for a song the player never quite finished.
     private func finishStalled(_ cur: Entry) {
         stallEnds += 1
+        Diagnostics.note("song stuck", "\"\(cur.item.title)\" waited just before its end: counted as ended")
         if queue.repeatOne {
             // again from the start, from a fresh copy (by now the server has the finished MP3, exact length)
             put(cur.item, fallback: cur.usingFallback, at: 0, play: true)
+            noteSong("again (repeat one)")
             songChanged()
             fillPreload()
             nowPlaying(reset: true)
@@ -954,13 +1051,18 @@ final class PlayerEngine: NSObject {
         info[MPNowPlayingInfoPropertyPlaybackRate] = isPlaying && !isWaiting ? 1.0 : 0.0
         info[MPNowPlayingInfoPropertyDefaultPlaybackRate] = 1.0
         if let art = it.art {
-            if let img = artwork.image(for: art) {
+            // the cover already shown for this song is kept when everything is set again (reset), even if the
+            // cache has let go of it or the server can't be reached
+            let kept = shownArt?.key == it.key ? shownArt?.image : nil
+            if let img = artwork.image(for: art) ?? kept {
                 info[MPMediaItemPropertyArtwork] = MPMediaItemArtwork(boundsSize: img.size) { _ in img }
+                shownArt = (it.key, img)
             } else if reset {
                 artwork.fetch(art) { [weak self] img in
                     guard let self = self, let img = img, self.current?.item.key == it.key,
                           var now = MPNowPlayingInfoCenter.default().nowPlayingInfo else { return }
                     now[MPMediaItemPropertyArtwork] = MPMediaItemArtwork(boundsSize: img.size) { _ in img }
+                    self.shownArt = (it.key, img)
                     MPNowPlayingInfoCenter.default().nowPlayingInfo = now
                 }
             }
@@ -976,17 +1078,29 @@ final class PlayerEngine: NSObject {
         guard let info = n.userInfo, let raw = info[AVAudioSessionInterruptionTypeKey] as? UInt,
               let type = AVAudioSession.InterruptionType(rawValue: raw) else { return }
         let options = AVAudioSession.InterruptionOptions(rawValue: info[AVAudioSessionInterruptionOptionKey] as? UInt ?? 0)
+        let reason = info[AVAudioSessionInterruptionReasonKey] as? UInt
+        let wasSuspended = (info["AVAudioSessionInterruptionWasSuspendedKey"] as? NSNumber)?.boolValue
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
+            let others = "other audio playing \(Diagnostics.yn(AVAudioSession.sharedInstance().isOtherAudioPlaying))"
             if type == .began {
                 // the system has paused the player
+                PlayerEngine.sessionStarted = false
+                let why = Diagnostics.interruptionReason(reason)
+                let suspended = wasSuspended == true ? ", while the app was suspended" : ""
+                let wanted = Diagnostics.yn(self.wantsPlay)
+                Diagnostics.note("interruption", "began (a call, an alarm, Siri or another app took the sound), \(why)\(suspended); music was wanted \(wanted); \(others)")
                 self.resumeAfterInterruption = self.wantsPlay
             } else {
-                if options.contains(.shouldResume) && self.resumeAfterInterruption && self.current != nil {
-                    self.activateSession()
+                let resume = options.contains(.shouldResume)
+                if resume && self.resumeAfterInterruption && self.current != nil {
+                    Diagnostics.note("interruption", "ended, iOS says carry on: playing again; \(others)")
+                    self.activateSession("carrying on after an interruption")
                     self.player.play()
-                } else if self.resumeAfterInterruption {
-                    self.wantsPlay = false
+                } else {
+                    let then = self.resumeAfterInterruption ? "stays paused" : "nothing was playing"
+                    Diagnostics.note("interruption", "ended, iOS says carry on \(Diagnostics.yn(resume)); \(then); \(others)")
+                    if self.resumeAfterInterruption { self.wantsPlay = false }
                 }
                 self.resumeAfterInterruption = false
             }
@@ -998,28 +1112,46 @@ final class PlayerEngine: NSObject {
     @objc private func routeChanged(_ n: Notification) {
         guard let raw = n.userInfo?[AVAudioSessionRouteChangeReasonKey] as? UInt,
               let reason = AVAudioSession.RouteChangeReason(rawValue: raw) else { return }
+        let old = Diagnostics.outputs(n.userInfo?[AVAudioSessionRouteChangePreviousRouteKey] as? AVAudioSessionRouteDescription)
+        let new = Diagnostics.outputs(AVAudioSession.sharedInstance().currentRoute)
+        Diagnostics.note("route", "\(Diagnostics.name(reason)): \(old) -> \(new), category "
+                         + AVAudioSession.sharedInstance().category.rawValue.replacingOccurrences(of: "AVAudioSessionCategory", with: ""))
         if reason == .categoryChange {
             // something set another category (see keepSessionOurs); the app's own change comes here too and is
             // left alone
             DispatchQueue.main.async { [weak self] in
                 guard let self = self else { return }
-                let before = PlayerEngine.sessionRestores
-                PlayerEngine.keepSessionOurs()
-                if PlayerEngine.sessionRestores != before && self.current != nil {
-                    if self.wantsPlay { self.activateSession() }
+                if PlayerEngine.keepSessionOurs() && self.current != nil {
+                    // (only while the music is going: see appStateChanged)
+                    if self.player.timeControlStatus != .paused { self.activateSession("the session was set back") }
                     self.nowPlaying(reset: true)
                 }
             }
         }
         if reason == .oldDeviceUnavailable {
             // headphones unplugged or disconnected: pause, as the Music app does
-            DispatchQueue.main.async { [weak self] in self?.pause() }
+            DispatchQueue.main.async { [weak self] in self?.pause(from: "headphones or a speaker going away") }
         }
     }
 
+    @objc private func mediaServicesLost(_ n: Notification) {
+        Diagnostics.note("audio services", "lost (iOS's audio system stopped)")
+    }
+
+    /// iOS's hint (only while the app is in front) that another app's music started or stopped.
+    @objc private func otherAppHint(_ n: Notification) {
+        let raw = n.userInfo?[AVAudioSessionSilenceSecondaryAudioHintTypeKey] as? UInt
+        var what = "hint \(raw ?? 99)"
+        if raw == AVAudioSession.SilenceSecondaryAudioHintType.begin.rawValue { what = "its music started" }
+        if raw == AVAudioSession.SilenceSecondaryAudioHintType.end.rawValue { what = "its music stopped" }
+        Diagnostics.note("other app", what)
+    }
+
     @objc private func mediaServicesReset(_ n: Notification) {
+        Diagnostics.note("audio services", "reset (iOS's audio system restarted): making the player again")
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
+            PlayerEngine.sessionStarted = false
             // after a reset the audio objects have to be made again
             let cur = self.current
             let at = self.currentTime()
@@ -1073,7 +1205,43 @@ final class PlayerEngine: NSObject {
             "own": current != nil && !currentFromPage,
             "scrobbles": scrobbleLog.filter { $0.submission && $0.ok }.count,
             "nowPlaying": MPNowPlayingInfoCenter.default().nowPlayingInfo?[MPMediaItemPropertyTitle] as? String ?? "",
+            "nowPlayingArt": MPNowPlayingInfoCenter.default().nowPlayingInfo?[MPMediaItemPropertyArtwork] != nil,
+            "activations": PlayerEngine.activations,
+            "wantsPlay": wantsPlay,
         ]
+    }
+
+    // MARK: - for Diagnostics
+
+    /// The player in one line: its state, the song and where it is, what Now Playing shows.
+    var diagnosticsLine: String {
+        var status = Diagnostics.name(player.timeControlStatus)
+        if player.timeControlStatus == .waitingToPlayAtSpecifiedRate, let r = player.reasonForWaitingToPlay {
+            status += " (\(Diagnostics.name(r)))"
+        }
+        let song = current.map { "\"\($0.item.title)\"\($0.usingFallback ? " (MP3 version)" : "") at \(Diagnostics.clock(currentTime()))" } ?? "none"
+        let np = MPNowPlayingInfoCenter.default().nowPlayingInfo
+        let shown = (np?[MPMediaItemPropertyTitle] as? String).map { "\"\($0)\"" } ?? "nothing"
+        let rate = (np?[MPNowPlayingInfoPropertyPlaybackRate] as? NSNumber).map { "\($0.doubleValue)" } ?? "-"
+        let elapsed = (np?[MPNowPlayingInfoPropertyElapsedPlaybackTime] as? NSNumber).map { Diagnostics.clock($0.doubleValue) } ?? "-"
+        return "player \(status), wants to play \(Diagnostics.yn(wantsPlay)), song \(song); Now Playing shows \(shown) "
+            + "(rate \(rate), at \(elapsed), cover \(Diagnostics.yn(np?[MPMediaItemPropertyArtwork] != nil)))"
+    }
+
+    /// The lock screen's buttons that are switched on.
+    var commandsLine: String {
+        let c = MPRemoteCommandCenter.shared()
+        let all: [(String, MPRemoteCommand)] = [
+            ("play", c.playCommand), ("pause", c.pauseCommand), ("play/pause", c.togglePlayPauseCommand),
+            ("next", c.nextTrackCommand), ("back", c.previousTrackCommand), ("position", c.changePlaybackPositionCommand),
+        ]
+        return all.map { "\($0.0) \($0.1.isEnabled ? "on" : "off")" }.joined(separator: ", ")
+    }
+
+    var countersLine: String {
+        "session set back \(PlayerEngine.sessionRestores), Now Playing set again \(nowPlayingRepairs), "
+            + "songs stuck at the end \(stallEnds), second tries \(retriesDone), switched to MP3 \(mp3Switches), "
+            + "failures in a row \(errorsInARow), last error \(lastErrorReason.isEmpty ? "none" : lastErrorReason)"
     }
 }
 
@@ -1129,6 +1297,9 @@ final class ArtworkCache {
     init() { cache.countLimit = 12 }
 
     func image(for url: URL) -> UIImage? { cache.object(forKey: url as NSURL) }
+
+    /// As when iOS needs the memory (for the tests).
+    func removeAll() { cache.removeAllObjects() }
 
     func fetch(_ url: URL, done: @escaping (UIImage?) -> Void) {
         if let img = image(for: url) { done(img); return }

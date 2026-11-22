@@ -72,6 +72,7 @@ final class Bridge: NSObject, WKScriptMessageHandler, PageLink {
     func handle(_ type: String, _ body: [String: Any]) {
         switch type {
         case "hello":
+            if !pageReady { Diagnostics.note("page", "loaded (it said hello)") }
             pageReady = true
             sendAll(welcome: true)
         case "pull":
@@ -93,9 +94,9 @@ final class Bridge: NSObject, WKScriptMessageHandler, PageLink {
                         autoplay: (body["autoplay"] as? NSNumber)?.boolValue ?? false,
                         restore: (body["restore"] as? NSNumber)?.boolValue ?? false)
         case "play":
-            engine.play()
+            engine.play(from: "the page")
         case "pause":
-            engine.pause()
+            engine.pause(from: "the page")
         case "seek":
             engine.seek(Item.number(body["t"]) ?? 0)
         case "stop":

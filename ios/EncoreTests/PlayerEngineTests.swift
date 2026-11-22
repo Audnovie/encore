@@ -1,5 +1,6 @@
 import AVFoundation
 import MediaPlayer
+import UIKit
 import XCTest
 @testable import Encore
 
@@ -375,6 +376,57 @@ final class PlayerEngineTests: XCTestCase {
         XCTAssertEqual(info[MPMediaItemPropertyArtist] as? String, "Test")
         XCTAssertEqual(info[MPMediaItemPropertyPlaybackDuration] as? Double, 5)
     }
+
+    func testTheCoverStaysWhenNowPlayingIsSetAgain() throws {
+        StubServer.image = UIGraphicsImageRenderer(size: CGSize(width: 8, height: 8)).pngData { ctx in
+            UIColor.red.setFill()
+            ctx.fill(CGRect(x: 0, y: 0, width: 8, height: 8))
+        }
+        let a = Item(key: "a", url: try tone("a", seconds: 6), title: "Song a", artist: "Test", album: "Tests",
+                     art: URL(string: "http://stub.test/art/a.png"), duration: 6)
+        engine.load(a, req: 1, startAt: 0, autoplay: true, restore: false)
+        waitForSound()
+        waitUntil(5, "the cover on the lock screen") { MPNowPlayingInfoCenter.default().nowPlayingInfo?[MPMediaItemPropertyArtwork] != nil }
+        // iOS takes the memory back and the server can't be reached; then everything is set again (the app going
+        // to the background): the cover stays
+        engine.artwork.removeAll()
+        StubServer.imagesDown = true
+        engine.appStateChanged()
+        let info = MPNowPlayingInfoCenter.default().nowPlayingInfo ?? [:]
+        XCTAssertNotNil(info[MPMediaItemPropertyArtwork], "the cover is still there")
+        XCTAssertEqual(info[MPMediaItemPropertyTitle] as? String, "Song a")
+        XCTAssertEqual(engine.debugState["nowPlayingArt"] as? Bool, true)
+    }
+
+    func testComingBackAfterAnotherAppTookTheSoundLeavesItAlone() throws {
+        let a = song("a", try tone("a", seconds: 8), seconds: 8)
+        engine.load(a, req: 1, startAt: 0, autoplay: true, restore: false)
+        waitForSound()
+        // as iOS does when a call or another app's music begins: an interruption, and the player paused
+        NotificationCenter.default.post(name: AVAudioSession.interruptionNotification, object: AVAudioSession.sharedInstance(),
+                                        userInfo: [AVAudioSessionInterruptionTypeKey: AVAudioSession.InterruptionType.began.rawValue])
+        engine.player.pause()
+        waitUntil(3, "paused") { engine.player.timeControlStatus == .paused }
+        pause(0.3)
+        XCTAssertTrue(engine.wantsPlay, "it still wants to play, to carry on if iOS says so")
+        // Encore comes to the front (or goes to the background): starting the session now would silence the other app
+        let before = PlayerEngine.activations
+        engine.appStateChanged()
+        pause(0.3)
+        XCTAssertEqual(PlayerEngine.activations, before, "the session isn't started while the other app has the sound")
+        XCTAssertEqual(engine.player.timeControlStatus, .paused, "and Encore stays paused")
+        // iOS says carry on
+        NotificationCenter.default.post(name: AVAudioSession.interruptionNotification, object: AVAudioSession.sharedInstance(),
+                                        userInfo: [AVAudioSessionInterruptionTypeKey: AVAudioSession.InterruptionType.ended.rawValue,
+                                                   AVAudioSessionInterruptionOptionKey: AVAudioSession.InterruptionOptions.shouldResume.rawValue])
+        waitUntil(5, "playing again") { engine.player.timeControlStatus == .playing && engine.currentTime() > 0.5 }
+        XCTAssertGreaterThan(PlayerEngine.activations, before, "the session started again to carry on")
+        // while playing, with the session as it should be, coming to the front leaves the session alone
+        let playing = PlayerEngine.activations
+        engine.appStateChanged()
+        XCTAssertEqual(PlayerEngine.activations, playing)
+        XCTAssertEqual(MPNowPlayingInfoCenter.default().nowPlayingInfo?[MPMediaItemPropertyTitle] as? String, "Song a")
+    }
 }
 
 /// Stands in for the page: collects what the player tells it.
@@ -402,14 +454,31 @@ final class StubServer: URLProtocol {
     private static let lock = NSLock()
     private static var _requests: [URL] = []
     static var requests: [URL] { lock.lock(); defer { lock.unlock() }; return _requests }
-    static func reset() { lock.lock(); _requests = []; lock.unlock() }
+    /// what it answers for a cover (an address ending in .png), and whether covers can't be reached
+    static var image: Data?
+    static var imagesDown = false
+    static func reset() { lock.lock(); _requests = []; image = nil; imagesDown = false; lock.unlock() }
 
     override class func canInit(with request: URLRequest) -> Bool { request.url?.host == "stub.test" }
     override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
 
     override func startLoading() {
         guard let url = request.url else { return }
-        StubServer.lock.lock(); StubServer._requests.append(url); StubServer.lock.unlock()
+        StubServer.lock.lock()
+        StubServer._requests.append(url)
+        let image = StubServer.image, down = StubServer.imagesDown
+        StubServer.lock.unlock()
+        if url.path.hasSuffix(".png") {
+            guard !down, let image = image else {
+                client?.urlProtocol(self, didFailWithError: NSError(domain: NSURLErrorDomain, code: NSURLErrorCannotConnectToHost))
+                return
+            }
+            let r = HTTPURLResponse(url: url, statusCode: 200, httpVersion: "HTTP/1.1", headerFields: ["Content-Type": "image/png"])!
+            client?.urlProtocol(self, didReceive: r, cacheStoragePolicy: .notAllowed)
+            client?.urlProtocol(self, didLoad: image)
+            client?.urlProtocolDidFinishLoading(self)
+            return
+        }
         let body = Data(#"{"subsonic-response":{"status":"ok","version":"1.16.1"}}"#.utf8)
         let response = HTTPURLResponse(url: url, statusCode: 200, httpVersion: "HTTP/1.1", headerFields: ["Content-Type": "application/json"])!
         client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)

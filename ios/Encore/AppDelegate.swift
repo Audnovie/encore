@@ -5,7 +5,11 @@ import UIKit
 final class AppDelegate: UIResponder, UIApplicationDelegate {
     func application(_ application: UIApplication,
                      didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+        // UI tests: each fresh launch starts with an empty record
+        if TestMode.on && UserDefaults.standard.bool(forKey: "EncoreFreshStart") { Diagnostics.shared.clear() }
+        Diagnostics.note("launch", Diagnostics.appLine + ", app " + RootViewController.stateName(application.applicationState))
         PlayerEngine.configureAudioSession()
+        Diagnostics.note("session", Diagnostics.sessionLine())
         application.beginReceivingRemoteControlEvents()
         return true
     }
@@ -24,9 +28,23 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options connectionOptions: UIScene.ConnectionOptions) {
         guard let windowScene = scene as? UIWindowScene else { return }
         let w = UIWindow(windowScene: windowScene)
-        w.rootViewController = RootViewController()
+        let root = RootViewController()
+        w.rootViewController = root
         w.makeKeyAndVisible()
         window = w
+        if let item = connectionOptions.shortcutItem {
+            // opened from the Home Screen icon's menu while the app wasn't running (iOS doesn't call the method
+            // below for this one)
+            Diagnostics.note("Home Screen menu", "\(item.localizedTitle), opening the app")
+            DispatchQueue.main.async { _ = root.shortcut(item.type) }
+        }
+    }
+
+    /// The Home Screen icon's menu (touch and hold the icon) while the app is running.
+    func windowScene(_ windowScene: UIWindowScene, performActionFor shortcutItem: UIApplicationShortcutItem,
+                     completionHandler: @escaping (Bool) -> Void) {
+        Diagnostics.note("Home Screen menu", shortcutItem.localizedTitle)
+        completionHandler((window?.rootViewController as? RootViewController)?.shortcut(shortcutItem.type) ?? false)
     }
 }
 

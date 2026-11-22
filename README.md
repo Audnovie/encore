@@ -29,6 +29,10 @@ Generate the Xcode project with [XcodeGen](https://github.com/yonaskolb/XcodeGen
 - `PlayerEngine` — AVQueuePlayer, the lock screen (Now Playing, remote commands), plays registered with the
   server, listening time
 - `QueueState`, `EventLog` — the parts that don't need audio (unit-tested)
+- `Diagnostics` — a record of what the app and iOS did with the sound (the app in front or behind, the audio
+  session, calls and other apps taking the sound, outputs, lock screen buttons, the player and its songs), kept
+  on the phone. Touch and hold the app's icon → **Copy Diagnostics** puts how things stand and the latest of it
+  on the clipboard. Web and IP addresses are hidden (the music server's carry the sign-in token).
 
 The app is unsigned; install it with a sideloading tool such as Sideloadly (a free Apple ID works; the app has
 to be refreshed every 7 days).
@@ -54,7 +58,8 @@ request is ignored.
 1. builds the app and runs the unit tests (the real player with tone files, the queue, the news log)
 2. starts Navidrome (with a test library of tone-only songs) and nginx serving this commit's page, then runs
    the app tests against them in the simulator (playing, moving on in the background, lock screen buttons,
-   catching up after sleeping or being closed, songs that need the MP3 fallback or won't play, repeat one)
+   catching up after sleeping or being closed, songs that need the MP3 fallback or won't play, repeat one, the
+   audio session staying the music kind, Copy Diagnostics from the Home Screen icon's menu)
 3. builds the unsigned `Encore.ipa` and, when every test passed, publishes it with `encore.html` as the
    `latest` release
 

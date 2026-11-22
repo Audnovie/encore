@@ -16,6 +16,14 @@ final class RootViewController: UIViewController, WKNavigationDelegate, WKUIDele
     private var helloCheck: DispatchWorkItem?
     private var loadedAddress: URL?
     private var testPanel: TestPanel?
+    /// for Copy Diagnostics: the view has appeared (an alert can be shown), one is waiting, and how many times
+    /// diagnostics were copied since the app started (for the test panel)
+    private var appeared = false
+    private var copiedAlertWaiting = false
+    private(set) var copies = 0
+
+    /// The type of the Home Screen icon's menu item (Info.plist, UIApplicationShortcutItems).
+    static let copyDiagnosticsAction = "io.github.audnovie.encore.copy-diagnostics"
 
     /// the page's choice, or the system's over the first screen and the problem screen
     override var preferredStatusBarStyle: UIStatusBarStyle {
@@ -75,6 +83,12 @@ final class RootViewController: UIViewController, WKNavigationDelegate, WKUIDele
         nc.addObserver(self, selector: #selector(becameActive), name: UIApplication.didBecomeActiveNotification, object: nil)
         nc.addObserver(self, selector: #selector(resigningActive), name: UIApplication.willResignActiveNotification, object: nil)
         nc.addObserver(self, selector: #selector(wentToBackground), name: UIApplication.didEnterBackgroundNotification, object: nil)
+        nc.addObserver(self, selector: #selector(comingToFront), name: UIApplication.willEnterForegroundNotification, object: nil)
+        nc.addObserver(self, selector: #selector(closing), name: UIApplication.willTerminateNotification, object: nil)
+        nc.addObserver(self, selector: #selector(lowMemory), name: UIApplication.didReceiveMemoryWarningNotification, object: nil)
+        // (these two only come when the phone has a passcode)
+        nc.addObserver(self, selector: #selector(locked), name: UIApplication.protectedDataWillBecomeUnavailableNotification, object: nil)
+        nc.addObserver(self, selector: #selector(unlocked), name: UIApplication.protectedDataDidBecomeAvailableNotification, object: nil)
 
         if TestMode.on {
             let panel = TestPanel(controller: self)
@@ -201,19 +215,94 @@ final class RootViewController: UIViewController, WKNavigationDelegate, WKUIDele
     // MARK: - the app's life
 
     @objc private func becameActive() {
+        Diagnostics.note("app", "in front; " + engine.diagnosticsLine + "; " + Diagnostics.sessionLine())
         bridge.appActive()
         engine.appStateChanged()
     }
 
     @objc private func resigningActive() {
+        // (Control Center or Notification Center pulled down, the app switcher, a call coming in…)
+        Diagnostics.note("app", "not in front any more")
         bridge.save()
         engine.saveState()
     }
 
     @objc private func wentToBackground() {
+        Diagnostics.note("app", "in the background; " + engine.diagnosticsLine + "; " + Diagnostics.sessionLine())
         bridge.appInBackground()
         engine.saveState()
         engine.appStateChanged()
+        Diagnostics.shared.flush()
+    }
+
+    @objc private func comingToFront() { Diagnostics.note("app", "coming to the front") }
+
+    @objc private func closing() {
+        Diagnostics.note("app", "closing (swiped away, or iOS closing it); " + engine.diagnosticsLine)
+        Diagnostics.shared.flush()
+    }
+
+    @objc private func lowMemory() { Diagnostics.note("app", "iOS says memory is low") }
+    @objc private func locked() { Diagnostics.note("phone", "locked") }
+    @objc private func unlocked() { Diagnostics.note("phone", "unlocked") }
+
+    static func stateName(_ s: UIApplication.State) -> String {
+        switch s {
+        case .active: return "in front"
+        case .inactive: return "not quite in front"
+        case .background: return "in the background"
+        @unknown default: return "state \(s.rawValue)"
+        }
+    }
+
+    // MARK: - the Home Screen icon's menu
+
+    /// An item from the icon's menu (Info.plist, UIApplicationShortcutItems). False when it isn't one of ours.
+    func shortcut(_ type: String) -> Bool {
+        guard type == RootViewController.copyDiagnosticsAction else { return false }
+        copyDiagnostics()
+        return true
+    }
+
+    /// How things stand and the latest of what happened (Diagnostics), to the clipboard, then says so.
+    func copyDiagnostics() {
+        Diagnostics.note("copied", "diagnostics copied, app " + RootViewController.stateName(UIApplication.shared.applicationState))
+        let state: [String] = [
+            Diagnostics.appLine,
+            "Now: app \(RootViewController.stateName(UIApplication.shared.applicationState)), "
+                + "page \(bridge.pageReady ? "loaded" : "not loaded"), news waiting for the page \(bridge.log.events.count)",
+            engine.diagnosticsLine,
+            "Audio session: " + Diagnostics.sessionLine(),
+            "Lock screen buttons: " + engine.commandsLine,
+            "Counts: " + engine.countersLine,
+        ]
+        let text = Diagnostics.shared.report(state: state)
+        UIPasteboard.general.string = text
+        copies += 1
+        testPanel?.showCopied(text)
+        showCopiedAlert()
+    }
+
+    private func showCopiedAlert() {
+        guard appeared else {
+            // opened from the menu while the app wasn't running: once the screen is there
+            copiedAlertWaiting = true
+            return
+        }
+        copiedAlertWaiting = false
+        let a = UIAlertController(title: "Diagnostics copied",
+                                  message: "Paste them into your chat with Claude. They show what Encore and iOS did with the sound lately, and how things stand now. No addresses or passwords are in them.",
+                                  preferredStyle: .alert)
+        a.addAction(UIAlertAction(title: "OK", style: .default))
+        var top: UIViewController = self
+        while let p = top.presentedViewController { top = p }
+        top.present(a, animated: true)
+    }
+
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        appeared = true
+        if copiedAlertWaiting { showCopiedAlert() }
     }
 
     // MARK: - WKNavigationDelegate
@@ -267,6 +356,7 @@ final class RootViewController: UIViewController, WKNavigationDelegate, WKUIDele
         let e = error as NSError
         if e.domain == NSURLErrorDomain && e.code == NSURLErrorCancelled { return }
         if e.domain == "WebKitErrorDomain" && e.code == 102 { return } // "frame load interrupted" after a policy cancel
+        Diagnostics.note("page", "couldn't load: \(Diagnostics.describe(error))")
         showProblem(.unreachable(e.localizedDescription))
     }
 
@@ -289,6 +379,8 @@ final class RootViewController: UIViewController, WKNavigationDelegate, WKUIDele
 
     func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
         // the page's process was closed (iOS does this to save memory): load it again; the player plays on
+        Diagnostics.note("page", "its process was closed by iOS; loading it again (app "
+                         + RootViewController.stateName(UIApplication.shared.applicationState) + ")")
         bridge.pageGone()
         if let a = loadedAddress { webView.load(URLRequest(url: a)) }
     }

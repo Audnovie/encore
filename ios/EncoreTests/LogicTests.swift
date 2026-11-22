@@ -1,3 +1,4 @@
+import AVFoundation
 import XCTest
 @testable import Encore
 
@@ -270,5 +271,93 @@ final class AddressTests: XCTestCase {
         XCTAssertFalse(Address.sameSite(URL(string: "http://192.168.1.20:4533/")!, home))
         XCTAssertFalse(Address.sameSite(URL(string: "https://192.168.1.20:4534/")!, home))
         XCTAssertTrue(Address.sameSite(URL(string: "http://example.com/a")!, URL(string: "http://EXAMPLE.com:80/")!))
+    }
+}
+
+/// The record kept for Copy Diagnostics.
+final class DiagnosticsTests: XCTestCase {
+    private var file: URL!
+
+    override func setUp() {
+        file = FileManager.default.temporaryDirectory.appendingPathComponent("diagnostics-\(UUID().uuidString).log")
+    }
+
+    override func tearDown() {
+        try? FileManager.default.removeItem(at: file)
+    }
+
+    func testKeepsTheLatestLinesInOrderAcrossLaunches() {
+        let d = Diagnostics(file: file, maxLines: 5)
+        for i in 1...7 { d.add("event", "number \(i)") }
+        XCTAssertEqual(d.all.map { $0.components(separatedBy: "event: ").last ?? "" }, (3...7).map { "number \($0)" })
+        d.flush()
+        let again = Diagnostics(file: file, maxLines: 5)
+        XCTAssertEqual(again.all, d.all, "read back after the app was closed")
+        again.add("event", "number 8")
+        XCTAssertEqual(again.all.last?.hasSuffix("event: number 8"), true)
+        XCTAssertEqual(again.count, 5)
+    }
+
+    func testTheFileStaysSmall() throws {
+        let d = Diagnostics(file: file, maxLines: 50)
+        for i in 1...400 { d.add("event", "number \(i)") }
+        d.flush()
+        let lines = try String(contentsOf: file, encoding: .utf8).split(separator: "\n")
+        XCTAssertLessThanOrEqual(lines.count, 50 + 300, "written again with only the latest lines every 300")
+        XCTAssertEqual(lines.last.map(String.init)?.hasSuffix("number 400"), true)
+        XCTAssertEqual(Diagnostics(file: file, maxLines: 50).all, d.all)
+    }
+
+    func testHidesAddresses() {
+        let d = Diagnostics(file: nil)
+        d.add("song failed", "http://100.64.0.1:4533/rest/stream?u=someone&t=abc123&s=salt failed; 192.168.1.20:4534 and https://example.com/x too")
+        let line = d.all[0]
+        for never in ["100.64", "abc123", "someone", "192.168", "example.com", "://"] {
+            XCTAssertFalse(line.contains(never), never)
+        }
+        XCTAssertTrue(line.hasSuffix("song failed: <address> failed; <address> and <address> too"), line)
+    }
+
+    func testTheReportHasTheStateThenTheLatestLines() {
+        let d = Diagnostics(file: nil)
+        for i in 1...10 { d.add("event", "number \(i)") }
+        let lines = d.report(state: ["first", "second http://192.168.1.20:4534/ line"], lastLines: 3).components(separatedBy: "\n")
+        XCTAssertEqual(lines.count, 7)
+        XCTAssertTrue(lines[0].hasPrefix("Encore diagnostics, copied 20"), lines[0])
+        XCTAssertEqual(lines[1], "first")
+        XCTAssertEqual(lines[2], "second <address> line")
+        XCTAssertTrue(lines[3].contains("3 of 10 lines"), lines[3])
+        XCTAssertTrue(lines[4].hasSuffix("event: number 8"))
+        XCTAssertTrue(lines[6].hasSuffix("event: number 10"))
+    }
+
+    func testSomethingThatRepeatsIsNotedOnceInItsTime() {
+        let d = Diagnostics(file: nil)
+        for _ in 1...5 { d.addRarely("k", every: 60, "session", "couldn't set it back") }
+        d.addRarely("other", every: 60, "session", "something else")
+        XCTAssertEqual(d.count, 2)
+    }
+
+    func testClearForgetsEverything() {
+        let d = Diagnostics(file: file)
+        d.add("event", "one")
+        d.flush()
+        d.clear()
+        d.add("event", "two")
+        d.flush()
+        XCTAssertEqual(Diagnostics(file: file).all.count, 1)
+        XCTAssertEqual(d.all.count, 1)
+    }
+
+    func testWording() {
+        XCTAssertEqual(Diagnostics.clock(83.4), "1:23")
+        XCTAssertEqual(Diagnostics.clock(.nan), "-")
+        let e = NSError(domain: NSURLErrorDomain, code: NSURLErrorTimedOut,
+                        userInfo: [NSUnderlyingErrorKey: NSError(domain: NSPOSIXErrorDomain, code: 60)])
+        XCTAssertTrue(Diagnostics.describe(e).hasPrefix("NSURLErrorDomain -1001 < NSPOSIXErrorDomain 60 ("), Diagnostics.describe(e))
+        XCTAssertEqual(Diagnostics.port(.builtInSpeaker), "Speaker")
+        XCTAssertEqual(Diagnostics.interruptionReason(nil), "no reason given")
+        XCTAssertTrue(Diagnostics.sessionLine().contains("other audio playing"))
+        XCTAssertFalse(Diagnostics.appLine.isEmpty)
     }
 }

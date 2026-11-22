@@ -8,6 +8,8 @@ final class TestPanel: UIView {
     private weak var controller: RootViewController?
     private let state = UILabel()
     private let result = UILabel()
+    /// the last diagnostics copied (one line on screen; the tests read all of it)
+    private let copied = UILabel()
     private let js = UITextField()
     private var timer: Timer?
     private var runs = 0
@@ -61,6 +63,12 @@ final class TestPanel: UIView {
         }
         state.accessibilityIdentifier = "testState"
         result.accessibilityIdentifier = "testResult"
+        copied.font = .monospacedSystemFont(ofSize: 8, weight: .regular)
+        copied.textColor = .white
+        copied.numberOfLines = 1
+        copied.isAccessibilityElement = true
+        copied.accessibilityIdentifier = "testCopied"
+        copied.text = "-"
         js.accessibilityIdentifier = "testJS"
         js.backgroundColor = .white
         js.textColor = .black
@@ -75,7 +83,7 @@ final class TestPanel: UIView {
 
         let buttons: [(String, Selector)] = [
             ("Next", #selector(tapNext)), ("Prev", #selector(tapPrev)), ("Pause", #selector(tapPause)), ("Play", #selector(tapPlay)),
-            ("Freeze", #selector(tapFreeze)), ("Thaw", #selector(tapThaw)), ("Run", #selector(tapRun)),
+            ("Freeze", #selector(tapFreeze)), ("Thaw", #selector(tapThaw)), ("Diag", #selector(tapDiag)), ("Run", #selector(tapRun)),
         ]
         let row = UIStackView(arrangedSubviews: buttons.map { title, sel in
             let b = UIButton(type: .system)
@@ -91,7 +99,7 @@ final class TestPanel: UIView {
         row.spacing = 4
         row.heightAnchor.constraint(equalToConstant: 30).isActive = true
 
-        let stack = UIStackView(arrangedSubviews: [state, row, js, result])
+        let stack = UIStackView(arrangedSubviews: [state, row, js, result, copied])
         stack.axis = .vertical
         stack.spacing = 4
         stack.translatesAutoresizingMaskIntoConstraints = false
@@ -115,6 +123,8 @@ final class TestPanel: UIView {
         s["unconfirmed"] = c.bridge.log.events.count
         s["lastSeq"] = c.bridge.log.nextSeq - 1
         s["appState"] = UIApplication.shared.applicationState == .active ? "active" : UIApplication.shared.applicationState == .background ? "background" : "inactive"
+        s["copies"] = c.copies
+        s["diagLines"] = Diagnostics.shared.count
         if let d = try? JSONSerialization.data(withJSONObject: s, options: [.sortedKeys]), let text = String(data: d, encoding: .utf8) {
             state.text = text
         }
@@ -122,9 +132,16 @@ final class TestPanel: UIView {
 
     @objc private func tapNext() { controller?.engine.remoteNext() }
     @objc private func tapPrev() { controller?.engine.remotePrevious() }
-    @objc private func tapPause() { controller?.engine.pause() }
-    @objc private func tapPlay() { controller?.engine.play() }
+    @objc private func tapPause() { controller?.engine.pause(from: "the test panel") }
+    @objc private func tapPlay() { controller?.engine.play(from: "the test panel") }
     @objc private func tapFreeze() { controller?.bridge.frozen = true }
+    /// as Copy Diagnostics in the Home Screen icon's menu
+    @objc private func tapDiag() { controller?.copyDiagnostics() }
+
+    func showCopied(_ text: String) {
+        copied.text = text
+        copied.accessibilityLabel = text
+    }
 
     @objc private func tapThaw() {
         controller?.bridge.frozen = false

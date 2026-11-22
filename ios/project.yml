@@ -14,6 +14,8 @@ settings:
     SWIFT_VERSION: "5.0"
     MARKETING_VERSION: "1.0"
     CURRENT_PROJECT_VERSION: "1"
+    # the commit the app is built from, shown in Copy Diagnostics (CI sets it)
+    ENCORE_BUILD: dev
     TARGETED_DEVICE_FAMILY: "1"
     IPHONEOS_DEPLOYMENT_TARGET: "15.0"
     CODE_SIGN_STYLE: Manual
@@ -56,6 +58,12 @@ targets:
         NSAppTransportSecurity:
           NSAllowsArbitraryLoads: true
         NSLocalNetworkUsageDescription: Encore connects to your music server on your home network.
+        # touch and hold the app's icon: Copy Diagnostics (RootViewController.copyDiagnostics)
+        UIApplicationShortcutItems:
+          - UIApplicationShortcutItemType: io.github.audnovie.encore.copy-diagnostics
+            UIApplicationShortcutItemTitle: Copy Diagnostics
+            UIApplicationShortcutItemIconSymbolName: doc.on.doc
+        EncoreBuild: $(ENCORE_BUILD)
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: io.github.audnovie.encore
