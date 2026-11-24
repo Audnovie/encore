@@ -464,11 +464,12 @@ final class IntegrationTests: XCTestCase {
         XCTAssertTrue(app.wait(for: .runningBackground, timeout: 10))
         useIconMenu("running")
         XCTAssertTrue(app.wait(for: .runningForeground, timeout: 15), "Encore came to the front")
-        let alert = app.alerts["Diagnostics copied"]
+        let alert = app.alerts["Diagnostics copied"].firstMatch
         XCTAssertTrue(alert.waitForExistence(timeout: 15), "the app says it copied them")
         shot("copied-running")
-        alert.buttons["OK"].tap()
-        waitFor(10, "copied once") { native()["copies"] as? Int == copies + 1 }
+        // (one OK per copy: a tap that seemed ignored may still have arrived late)
+        for _ in 1...3 where alert.exists { alert.buttons["OK"].tap(); sleep(1) }
+        waitFor(10, "copied") { (native()["copies"] as? Int ?? 0) >= copies + 1 }
         let text = app.staticTexts["testCopied"].label
         XCTAssertTrue(text.hasPrefix("Encore diagnostics, copied"))
         XCTAssertTrue(text.contains("Home Screen menu: Copy Diagnostics"), "the record says where it came from")
@@ -480,35 +481,49 @@ final class IntegrationTests: XCTestCase {
         XCTAssertTrue(app.wait(for: .notRunning, timeout: 10))
         useIconMenu("closed")
         XCTAssertTrue(app.wait(for: .runningForeground, timeout: 20), "Encore opened")
-        let again = app.alerts["Diagnostics copied"]
+        let again = app.alerts["Diagnostics copied"].firstMatch
         XCTAssertTrue(again.waitForExistence(timeout: 20), "the app says it copied them")
         shot("copied-closed")
-        again.buttons["OK"].tap()
+        for _ in 1...3 where again.exists { again.buttons["OK"].tap(); sleep(1) }
     }
 
     /// From the Home Screen: touch and hold Encore's icon (looking through the Home Screen's pages for it), then
     /// Copy Diagnostics in its menu.
+    /// Returns once Encore is in front. The simulator's Home Screen sometimes ignores the tap on the menu item
+    /// (seen once on CI: the menu stayed open), so it tries up to 3 times.
     private func useIconMenu(_ when: String) {
         let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
-        // (pressed again on the Home Screen, Home goes to its first page: the search below swipes on from there)
-        XCUIDevice.shared.press(.home)
-        sleep(1)
-        XCUIDevice.shared.press(.home)
-        let icon = springboard.icons["Encore"].firstMatch
-        _ = icon.waitForExistence(timeout: 10)
-        var swipes = 0
-        while !(icon.exists && icon.isHittable) && swipes < 5 {
-            springboard.swipeLeft()
+        for attempt in 1...3 {
+            // (pressed again on the Home Screen, Home goes to its first page, where the search below starts;
+            // it also closes a menu left open)
+            XCUIDevice.shared.press(.home)
             sleep(1)
-            swipes += 1
+            XCUIDevice.shared.press(.home)
+            let icon = springboard.icons["Encore"].firstMatch
+            _ = icon.waitForExistence(timeout: 10)
+            var swipes = 0
+            while !(icon.exists && icon.isHittable) && swipes < 5 {
+                springboard.swipeLeft()
+                sleep(1)
+                swipes += 1
+            }
+            shot("home-screen-\(when)-\(attempt)")
+            guard icon.exists && icon.isHittable else {
+                XCTFail("Encore's icon on the Home Screen (after \(swipes) swipes)")
+                return
+            }
+            icon.press(forDuration: 1.2)
+            let item = springboard.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Copy Diagnostics")).firstMatch
+            guard item.waitForExistence(timeout: 10) else {
+                print("ENCORE-DIAG no Copy Diagnostics in the icon's menu (try \(attempt))")
+                continue
+            }
+            shot("icon-menu-\(when)-\(attempt)")
+            item.tap()
+            if app.wait(for: .runningForeground, timeout: 20) { return }
+            print("ENCORE-DIAG the menu's tap didn't open Encore (try \(attempt))")
         }
-        shot("home-screen-\(when)")
-        XCTAssertTrue(icon.exists && icon.isHittable, "Encore's icon on the Home Screen (after \(swipes) swipes)")
-        icon.press(forDuration: 1.2)
-        let item = springboard.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Copy Diagnostics")).firstMatch
-        XCTAssertTrue(item.waitForExistence(timeout: 10), "Copy Diagnostics in the icon's menu")
-        shot("icon-menu-\(when)")
-        item.tap()
+        XCTFail("Copy Diagnostics in the icon's menu didn't open Encore in 3 tries")
     }
 }
 
