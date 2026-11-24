@@ -43,7 +43,8 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     /// iOS let go of the app's screen (it can, for a scene in the background, to save resources). The player
     /// lives with the screen, so this would stop the music: noted, to see whether it ever happens.
     func sceneDidDisconnect(_ scene: UIScene) {
-        Diagnostics.note("app", "iOS disconnected its screen (scene)")
+        // (this also comes when the app is swiped away: then "closing" follows)
+        Diagnostics.note("app", "its screen (scene) was disconnected; if \"closing\" doesn't follow, iOS did it")
         Diagnostics.shared.flush()
     }
 

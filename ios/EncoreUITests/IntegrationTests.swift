@@ -494,8 +494,8 @@ final class IntegrationTests: XCTestCase {
     private func useIconMenu(_ when: String) {
         let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
         for attempt in 1...3 {
-            // (pressed again on the Home Screen, Home goes to its first page, where the search below starts;
-            // it also closes a menu left open)
+            // (pressed again on the Home Screen, Home goes back towards its first page, and the search below
+            // swipes on from there; it also closes a menu left open)
             XCUIDevice.shared.press(.home)
             sleep(1)
             XCUIDevice.shared.press(.home)

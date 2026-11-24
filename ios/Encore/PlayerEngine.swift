@@ -226,7 +226,7 @@ final class PlayerEngine: NSObject {
 
     /// The page asked for something the app can't play (no usable address): stop, note the request and say so.
     func rejectLoad(req: Int, key: String) {
-        stop()
+        stop(from: "the page, which asked for a song the app can't play")
         queue.note(req: req)
         rejectedKey = key
         reportError(key, "This can’t be played in the app.", reason: "unsupported")
