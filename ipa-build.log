@@ -1,0 +1,4 @@
+    /Applications/Xcode_26.6.app/Contents/Developer/usr/bin/xcodebuild -project Encore.xcodeproj -scheme Encore -configuration Release -sdk iphoneos -destination generic/platform=iOS -derivedDataPath build/dev CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY= ENCORE_BUILD=97b6bd5 build
+    ENCORE_BUILD = 97b6bd5
+2026-11-24 13:58:45.771 appintentsmetadataprocessor[52491:143494] warning: Metadata extraction skipped. No AppIntents.framework dependency found.
+** BUILD SUCCEEDED **

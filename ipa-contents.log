@@ -1,0 +1,86 @@
+Dict {
+    UIRequiredDeviceCapabilities = Array {
+        arm64
+    }
+    UIRequiresFullScreen = true
+    CFBundleInfoDictionaryVersion = 6.0
+    DTPlatformVersion = 26.5
+    CFBundleName = Encore
+    DTSDKName = iphoneos26.5
+    CFBundleIcons = Dict {
+        CFBundlePrimaryIcon = Dict {
+            CFBundleIconFiles = Array {
+                AppIcon60x60
+            }
+            CFBundleIconName = AppIcon
+        }
+    }
+    UILaunchScreen = Dict {
+        UIColorName = LaunchBackground
+    }
+    CFBundleDisplayName = Encore
+    LSRequiresIPhoneOS = true
+    EncoreBuild = 97b6bd5
+    UIBackgroundModes = Array {
+        audio
+    }
+    DTSDKBuild = 23F81a
+    CFBundleShortVersionString = 1.0
+    CFBundleSupportedPlatforms = Array {
+        iPhoneOS
+    }
+    UISupportedInterfaceOrientations = Array {
+        UIInterfaceOrientationPortrait
+    }
+    BuildMachineOSBuild = 25G332
+    DTPlatformBuild = 23F81a
+    CFBundlePackageType = APPL
+    DTXcodeBuild = 17F113
+    CFBundleDevelopmentRegion = en
+    MinimumOSVersion = 15.0
+    CFBundleVersion = 1
+    UIDeviceFamily = Array {
+        1
+        2
+    }
+    CFBundleIdentifier = io.github.audnovie.encore
+    UIApplicationSceneManifest = Dict {
+        UIApplicationSupportsMultipleScenes = false
+        UISceneConfigurations = Dict {
+            UIWindowSceneSessionRoleApplication = Array {
+                Dict {
+                    UISceneDelegateClassName = Encore.SceneDelegate
+                    UISceneConfigurationName = Default
+                }
+            }
+        }
+    }
+    DTXcode = 2660
+    UIApplicationShortcutItems = Array {
+        Dict {
+            UIApplicationShortcutItemIconSymbolName = doc.on.doc
+            UIApplicationShortcutItemType = io.github.audnovie.encore.copy-diagnostics
+            UIApplicationShortcutItemTitle = Copy Diagnostics
+        }
+    }
+    UIApplicationSupportsIndirectInputEvents = true
+    CFBundleExecutable = Encore
+    NSAppTransportSecurity = Dict {
+        NSAllowsArbitraryLoads = true
+    }
+    CFBundleIcons~ipad = Dict {
+        CFBundlePrimaryIcon = Dict {
+            CFBundleIconFiles = Array {
+                AppIcon60x60
+                AppIcon76x76
+            }
+            CFBundleIconName = AppIcon
+        }
+    }
+    DTPlatformName = iphoneos
+    NSLocalNetworkUsageDescription = Encore connects to your music server on your home network.
+    DTCompiler = com.apple.compilers.llvm.clang.1_0
+}
+888K	build/dev/Build/Products/Release-iphoneos/Encore.app
+-rw-r--r--  1 runner  staff  351508 Nov 24 13:58 ../dist/Encore.ipa
+27cd773e19ce4065fec1970939aa765f4e4c4dc959b6cbfcd1ed07feeefd9e67  ../dist/Encore.ipa

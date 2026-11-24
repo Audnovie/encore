@@ -1,0 +1,134 @@
+{
+  "devices" : [
+    {
+      "architecture" : "arm64",
+      "deviceId" : "6478AFFB-AE17-412A-A1E5-51BCFFD300B6",
+      "deviceName" : "iPhone 17 Pro",
+      "modelName" : "iPhone 17 Pro",
+      "osBuildNumber" : "23F77",
+      "osVersion" : "26.5",
+      "platform" : "iOS Simulator"
+    }
+  ],
+  "testNodes" : [
+    {
+      "children" : [
+        {
+          "children" : [
+            {
+              "children" : [
+                {
+                  "duration" : "1m 24s",
+                  "durationInSeconds" : 84.87255609035492,
+                  "name" : "test1PlaysAndMovesOnWhileInTheBackground()",
+                  "nodeIdentifier" : "IntegrationTests/test1PlaysAndMovesOnWhileInTheBackground()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Encore/EncoreUITests/IntegrationTests/test1PlaysAndMovesOnWhileInTheBackground",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "1m 10s",
+                  "durationInSeconds" : 70.88031208515167,
+                  "name" : "test2LockScreenButtons()",
+                  "nodeIdentifier" : "IntegrationTests/test2LockScreenButtons()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Encore/EncoreUITests/IntegrationTests/test2LockScreenButtons",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "49s",
+                  "durationInSeconds" : 49.68859505653381,
+                  "name" : "test3PageAsleepCatchesUp()",
+                  "nodeIdentifier" : "IntegrationTests/test3PageAsleepCatchesUp()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Encore/EncoreUITests/IntegrationTests/test3PageAsleepCatchesUp",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "43s",
+                  "durationInSeconds" : 43.874441027641296,
+                  "name" : "test4ReopenedAppCatchesUp()",
+                  "nodeIdentifier" : "IntegrationTests/test4ReopenedAppCatchesUp()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Encore/EncoreUITests/IntegrationTests/test4ReopenedAppCatchesUp",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "54s",
+                  "durationInSeconds" : 54.446107029914856,
+                  "name" : "test5FallbackAndSongsThatWontPlay()",
+                  "nodeIdentifier" : "IntegrationTests/test5FallbackAndSongsThatWontPlay()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Encore/EncoreUITests/IntegrationTests/test5FallbackAndSongsThatWontPlay",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "55s",
+                  "durationInSeconds" : 55.6899710893631,
+                  "name" : "test6RepeatOneAndTheEnd()",
+                  "nodeIdentifier" : "IntegrationTests/test6RepeatOneAndTheEnd()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Encore/EncoreUITests/IntegrationTests/test6RepeatOneAndTheEnd",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "41s",
+                  "durationInSeconds" : 41.12564504146576,
+                  "name" : "test7FirstScreenAndProblems()",
+                  "nodeIdentifier" : "IntegrationTests/test7FirstScreenAndProblems()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Encore/EncoreUITests/IntegrationTests/test7FirstScreenAndProblems",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "45s",
+                  "durationInSeconds" : 45.916853070259094,
+                  "name" : "test8LowerQuality()",
+                  "nodeIdentifier" : "IntegrationTests/test8LowerQuality()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Encore/EncoreUITests/IntegrationTests/test8LowerQuality",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "48s",
+                  "durationInSeconds" : 48.32341802120209,
+                  "name" : "test9AudioSessionStaysMusic()",
+                  "nodeIdentifier" : "IntegrationTests/test9AudioSessionStaysMusic()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Encore/EncoreUITests/IntegrationTests/test9AudioSessionStaysMusic",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "5m 13s",
+                  "durationInSeconds" : 313.9344040155411,
+                  "name" : "testZCopyDiagnosticsFromTheHomeScreen()",
+                  "nodeIdentifier" : "IntegrationTests/testZCopyDiagnosticsFromTheHomeScreen()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Encore/EncoreUITests/IntegrationTests/testZCopyDiagnosticsFromTheHomeScreen",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                }
+              ],
+              "name" : "IntegrationTests",
+              "nodeIdentifierURL" : "test://com.apple.xcode/Encore/EncoreUITests/IntegrationTests",
+              "nodeType" : "Test Suite",
+              "result" : "Passed"
+            }
+          ],
+          "name" : "EncoreUITests",
+          "nodeIdentifierURL" : "test://com.apple.xcode/Encore/EncoreUITests",
+          "nodeType" : "UI test bundle",
+          "result" : "Passed"
+        }
+      ],
+      "name" : "Encore",
+      "nodeType" : "Test Plan",
+      "result" : "Passed"
+    }
+  ],
+  "testPlanConfigurations" : [
+    {
+      "configurationId" : "1",
+      "configurationName" : "Test Scheme Action"
+    }
+  ]
+}

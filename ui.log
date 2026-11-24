@@ -1,0 +1,24 @@
+Test Case '-[EncoreUITests.IntegrationTests test1PlaysAndMovesOnWhileInTheBackground]' started.
+Test Case '-[EncoreUITests.IntegrationTests test1PlaysAndMovesOnWhileInTheBackground]' passed (84.873 seconds).
+Test Case '-[EncoreUITests.IntegrationTests test2LockScreenButtons]' started.
+Test Case '-[EncoreUITests.IntegrationTests test2LockScreenButtons]' passed (70.880 seconds).
+Test Case '-[EncoreUITests.IntegrationTests test3PageAsleepCatchesUp]' started.
+Test Case '-[EncoreUITests.IntegrationTests test3PageAsleepCatchesUp]' passed (49.689 seconds).
+Test Case '-[EncoreUITests.IntegrationTests test4ReopenedAppCatchesUp]' started.
+Test Case '-[EncoreUITests.IntegrationTests test4ReopenedAppCatchesUp]' passed (43.874 seconds).
+Test Case '-[EncoreUITests.IntegrationTests test5FallbackAndSongsThatWontPlay]' started.
+Test Case '-[EncoreUITests.IntegrationTests test5FallbackAndSongsThatWontPlay]' passed (54.446 seconds).
+Test Case '-[EncoreUITests.IntegrationTests test6RepeatOneAndTheEnd]' started.
+Test Case '-[EncoreUITests.IntegrationTests test6RepeatOneAndTheEnd]' passed (55.690 seconds).
+Test Case '-[EncoreUITests.IntegrationTests test7FirstScreenAndProblems]' started.
+Test Case '-[EncoreUITests.IntegrationTests test7FirstScreenAndProblems]' passed (41.126 seconds).
+Test Case '-[EncoreUITests.IntegrationTests test8LowerQuality]' started.
+Test Case '-[EncoreUITests.IntegrationTests test8LowerQuality]' passed (45.917 seconds).
+Test Case '-[EncoreUITests.IntegrationTests test9AudioSessionStaysMusic]' started.
+Test Case '-[EncoreUITests.IntegrationTests test9AudioSessionStaysMusic]' passed (48.323 seconds).
+Test Case '-[EncoreUITests.IntegrationTests testZCopyDiagnosticsFromTheHomeScreen]' started.
+Test Case '-[EncoreUITests.IntegrationTests testZCopyDiagnosticsFromTheHomeScreen]' passed (313.934 seconds).
+	 Executed 10 tests, with 0 failures (0 unexpected) in 808.752 (808.784) seconds
+	 Executed 10 tests, with 0 failures (0 unexpected) in 808.752 (808.786) seconds
+	 Executed 10 tests, with 0 failures (0 unexpected) in 808.752 (808.789) seconds
+** TEST EXECUTE SUCCEEDED **

@@ -1,0 +1,111 @@
+Test Case '-[EncoreTests.AddressTests testAddressesAsTyped]' started.
+Test Case '-[EncoreTests.AddressTests testAddressesAsTyped]' passed (0.002 seconds).
+Test Case '-[EncoreTests.AddressTests testNotAddresses]' started.
+Test Case '-[EncoreTests.AddressTests testNotAddresses]' passed (0.001 seconds).
+Test Case '-[EncoreTests.AddressTests testSameSite]' started.
+Test Case '-[EncoreTests.AddressTests testSameSite]' passed (0.001 seconds).
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.003 (0.005) seconds
+Test Case '-[EncoreTests.DiagnosticsTests testANoteStaysOneLine]' started.
+Test Case '-[EncoreTests.DiagnosticsTests testANoteStaysOneLine]' passed (0.005 seconds).
+Test Case '-[EncoreTests.DiagnosticsTests testClearForgetsEverything]' started.
+Test Case '-[EncoreTests.DiagnosticsTests testClearForgetsEverything]' passed (0.005 seconds).
+Test Case '-[EncoreTests.DiagnosticsTests testHidesAddresses]' started.
+Test Case '-[EncoreTests.DiagnosticsTests testHidesAddresses]' passed (0.001 seconds).
+Test Case '-[EncoreTests.DiagnosticsTests testKeepsTheLatestLinesInOrderAcrossLaunches]' started.
+Test Case '-[EncoreTests.DiagnosticsTests testKeepsTheLatestLinesInOrderAcrossLaunches]' passed (0.005 seconds).
+Test Case '-[EncoreTests.DiagnosticsTests testSomethingThatRepeatsIsNotedOnceInItsTime]' started.
+Test Case '-[EncoreTests.DiagnosticsTests testSomethingThatRepeatsIsNotedOnceInItsTime]' passed (0.001 seconds).
+Test Case '-[EncoreTests.DiagnosticsTests testTheFileStaysSmall]' started.
+Test Case '-[EncoreTests.DiagnosticsTests testTheFileStaysSmall]' passed (0.157 seconds).
+Test Case '-[EncoreTests.DiagnosticsTests testTheReportHasTheStateThenTheLatestLines]' started.
+Test Case '-[EncoreTests.DiagnosticsTests testTheReportHasTheStateThenTheLatestLines]' passed (0.001 seconds).
+Test Case '-[EncoreTests.DiagnosticsTests testWording]' started.
+Test Case '-[EncoreTests.DiagnosticsTests testWording]' passed (0.004 seconds).
+	 Executed 8 tests, with 0 failures (0 unexpected) in 0.180 (0.268) seconds
+Test Case '-[EncoreTests.EventLogTests testDayKeyUsesThePhonesTimeZone]' started.
+Test Case '-[EncoreTests.EventLogTests testDayKeyUsesThePhonesTimeZone]' passed (0.004 seconds).
+Test Case '-[EncoreTests.EventLogTests testListeningBecomesOneMessage]' started.
+Test Case '-[EncoreTests.EventLogTests testListeningBecomesOneMessage]' passed (0.001 seconds).
+Test Case '-[EncoreTests.EventLogTests testMessagesThatArentJSONAreDropped]' started.
+Test Case '-[EncoreTests.EventLogTests testMessagesThatArentJSONAreDropped]' passed (0.001 seconds).
+Test Case '-[EncoreTests.EventLogTests testNumbersAndConfirming]' started.
+Test Case '-[EncoreTests.EventLogTests testNumbersAndConfirming]' passed (0.001 seconds).
+Test Case '-[EncoreTests.EventLogTests testOldestDroppedWhenFull]' started.
+Test Case '-[EncoreTests.EventLogTests testOldestDroppedWhenFull]' passed (0.018 seconds).
+Test Case '-[EncoreTests.EventLogTests testSavedAndLoaded]' started.
+Test Case '-[EncoreTests.EventLogTests testSavedAndLoaded]' passed (0.021 seconds).
+	 Executed 6 tests, with 0 failures (0 unexpected) in 0.046 (0.102) seconds
+Test Case '-[EncoreTests.ItemTests testDetailsPassedBackToThePage]' started.
+Test Case '-[EncoreTests.ItemTests testDetailsPassedBackToThePage]' passed (0.002 seconds).
+Test Case '-[EncoreTests.ItemTests testOldSavedItemsStillLoad]' started.
+Test Case '-[EncoreTests.ItemTests testOldSavedItemsStillLoad]' passed (0.069 seconds).
+Test Case '-[EncoreTests.ItemTests testRadio]' started.
+Test Case '-[EncoreTests.ItemTests testRadio]' passed (0.001 seconds).
+Test Case '-[EncoreTests.ItemTests testReadsTheHelloFromThePage]' started.
+Test Case '-[EncoreTests.ItemTests testReadsTheHelloFromThePage]' passed (0.000 seconds).
+Test Case '-[EncoreTests.ItemTests testRejectsWhatItCantPlay]' started.
+Test Case '-[EncoreTests.ItemTests testRejectsWhatItCantPlay]' passed (0.007 seconds).
+Test Case '-[EncoreTests.ItemTests testScrobbleAddress]' started.
+Test Case '-[EncoreTests.ItemTests testScrobbleAddress]' passed (0.001 seconds).
+	 Executed 6 tests, with 0 failures (0 unexpected) in 0.079 (0.082) seconds
+Test Case '-[EncoreTests.PlayerEngineTests testAPlayIsntCountedAgainWhenStartingPastHalfway]' started.
+Test Case '-[EncoreTests.PlayerEngineTests testAPlayIsntCountedAgainWhenStartingPastHalfway]' passed (2.838 seconds).
+Test Case '-[EncoreTests.PlayerEngineTests testASongThatWontLoadWhilePausedIsLeftAlone]' started.
+Test Case '-[EncoreTests.PlayerEngineTests testASongThatWontLoadWhilePausedIsLeftAlone]' passed (2.386 seconds).
+Test Case '-[EncoreTests.PlayerEngineTests testCantReachTheServerStopsInsteadOfSkipping]' started.
+Test Case '-[EncoreTests.PlayerEngineTests testCantReachTheServerStopsInsteadOfSkipping]' passed (0.815 seconds).
+Test Case '-[EncoreTests.PlayerEngineTests testComingBackAfterAnotherAppTookTheSoundLeavesItAlone]' started.
+Test Case '-[EncoreTests.PlayerEngineTests testComingBackAfterAnotherAppTookTheSoundLeavesItAlone]' passed (1.329 seconds).
+Test Case '-[EncoreTests.PlayerEngineTests testFallsBackToTheMP3VersionThenSkipsWhatWontPlay]' started.
+Test Case '-[EncoreTests.PlayerEngineTests testFallsBackToTheMP3VersionThenSkipsWhatWontPlay]' passed (0.809 seconds).
+Test Case '-[EncoreTests.PlayerEngineTests testKeepsItsPlaceForTheNextLaunch]' started.
+Test Case '-[EncoreTests.PlayerEngineTests testKeepsItsPlaceForTheNextLaunch]' passed (2.968 seconds).
+Test Case '-[EncoreTests.PlayerEngineTests testLockScreenNextAndBack]' started.
+Test Case '-[EncoreTests.PlayerEngineTests testLockScreenNextAndBack]' passed (5.072 seconds).
+Test Case '-[EncoreTests.PlayerEngineTests testMovesOnByItselfAndRegistersPlays]' started.
+Test Case '-[EncoreTests.PlayerEngineTests testMovesOnByItselfAndRegistersPlays]' passed (4.767 seconds).
+Test Case '-[EncoreTests.PlayerEngineTests testNowPlayingOnTheLockScreen]' started.
+Test Case '-[EncoreTests.PlayerEngineTests testNowPlayingOnTheLockScreen]' passed (0.377 seconds).
+Test Case '-[EncoreTests.PlayerEngineTests testPlayAfterTheConnectionBrokeMidSongStartsItAgain]' started.
+Test Case '-[EncoreTests.PlayerEngineTests testPlayAfterTheConnectionBrokeMidSongStartsItAgain]' passed (1.492 seconds).
+Test Case '-[EncoreTests.PlayerEngineTests testRecognisesConnectionProblems]' started.
+Test Case '-[EncoreTests.PlayerEngineTests testRecognisesConnectionProblems]' passed (0.003 seconds).
+Test Case '-[EncoreTests.PlayerEngineTests testRepeatOneStartsTheSongAgain]' started.
+Test Case '-[EncoreTests.PlayerEngineTests testRepeatOneStartsTheSongAgain]' passed (4.031 seconds).
+Test Case '-[EncoreTests.PlayerEngineTests testRestoreDoesntReplaceThePlayingSong]' started.
+Test Case '-[EncoreTests.PlayerEngineTests testRestoreDoesntReplaceThePlayingSong]' passed (0.432 seconds).
+Test Case '-[EncoreTests.PlayerEngineTests testRestoreLoadsPausedWhereItWas]' started.
+Test Case '-[EncoreTests.PlayerEngineTests testRestoreLoadsPausedWhereItWas]' passed (0.101 seconds).
+Test Case '-[EncoreTests.PlayerEngineTests testSnapshotSaysWhoChoseTheSong]' started.
+Test Case '-[EncoreTests.PlayerEngineTests testSnapshotSaysWhoChoseTheSong]' passed (0.502 seconds).
+Test Case '-[EncoreTests.PlayerEngineTests testStopClearsEverything]' started.
+Test Case '-[EncoreTests.PlayerEngineTests testStopClearsEverything]' passed (0.374 seconds).
+Test Case '-[EncoreTests.PlayerEngineTests testTheCoverStaysWhenNowPlayingIsSetAgain]' started.
+Test Case '-[EncoreTests.PlayerEngineTests testTheCoverStaysWhenNowPlayingIsSetAgain]' passed (0.417 seconds).
+Test Case '-[EncoreTests.PlayerEngineTests testTheMP3VersionIsTriedOnceMoreWhenItsConnectionBreaks]' started.
+Test Case '-[EncoreTests.PlayerEngineTests testTheMP3VersionIsTriedOnceMoreWhenItsConnectionBreaks]' passed (0.801 seconds).
+Test Case '-[EncoreTests.PlayerEngineTests testTheNextSongPlaysAsMP3WhenItsOriginalWontPlay]' started.
+Test Case '-[EncoreTests.PlayerEngineTests testTheNextSongPlaysAsMP3WhenItsOriginalWontPlay]' passed (1.840 seconds).
+	 Executed 19 tests, with 0 failures (0 unexpected) in 31.357 (31.371) seconds
+Test Case '-[EncoreTests.QueueStateTests testARequestTheAppCouldntTakeStillCounts]' started.
+Test Case '-[EncoreTests.QueueStateTests testARequestTheAppCouldntTakeStillCounts]' passed (0.001 seconds).
+Test Case '-[EncoreTests.QueueStateTests testBackListIsLimited]' started.
+Test Case '-[EncoreTests.QueueStateTests testBackListIsLimited]' passed (0.003 seconds).
+Test Case '-[EncoreTests.QueueStateTests testBackNeverGoesToAStation]' started.
+Test Case '-[EncoreTests.QueueStateTests testBackNeverGoesToAStation]' passed (0.001 seconds).
+Test Case '-[EncoreTests.QueueStateTests testComingSongsOnlyForTheSongTheAppIsOn]' started.
+Test Case '-[EncoreTests.QueueStateTests testComingSongsOnlyForTheSongTheAppIsOn]' passed (0.001 seconds).
+Test Case '-[EncoreTests.QueueStateTests testLoadTakesTheSongAndForgetsTheOldComingSongs]' started.
+Test Case '-[EncoreTests.QueueStateTests testLoadTakesTheSongAndForgetsTheOldComingSongs]' passed (0.002 seconds).
+Test Case '-[EncoreTests.QueueStateTests testMovingOnAndBack]' started.
+Test Case '-[EncoreTests.QueueStateTests testMovingOnAndBack]' passed (0.001 seconds).
+Test Case '-[Enc2026-11-24 13:42:14.029606+0000 Encore[9984:40122] [player] <<<< FigFilePlayer >>>> signalled err=-12864 at <>:10127
+Test Case '-[EncoreTests.QueueStateTests testRequestNumbersCanStartOverAfterThePageReloads]' passed (0.023 seconds).
+Test Case '-[EncoreTests.QueueStateTests testRestoreIsOnlyTakenWhenNothingIsPlaying]' started.
+Test Case '-[EncoreTests.QueueStateTests testRestoreIsOnlyTakenWhenNothingIsPlaying]' passed (0.002 seconds).
+Test Case '-[EncoreTests.QueueStateTests testStopKeepsTheRequestNumber]' started.
+Test Case '-[EncoreTests.QueueStateTests testStopKeepsTheRequestNumber]' passed (0.002 seconds).
+	 Executed 9 tests, with 2026-11-24 13:42:14.040932+0000 Encore[9984:36643] [player] <<<< FigFilePlayer >>>> signalled err=-12864 at <>:10127
+	 Executed 51 tests, with 0 failures (0 unexpected) in 31.702 (31.882) seconds
+	 Executed 51 tests, with 0 failures (0 unexpected) in 31.702 (31.884) seconds
+** TEST EXECUTE SUCCEEDED **

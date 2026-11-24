@@ -1,0 +1,3 @@
+    /Applications/Xcode_26.6.app/Contents/Developer/usr/bin/xcodebuild build-for-testing -project Encore.xcodeproj -scheme Encore -destination "generic/platform=iOS Simulator" -derivedDataPath build/sim ONLY_ACTIVE_ARCH=YES ARCHS=arm64 ENCORE_BUILD=97b6bd5
+    ENCORE_BUILD = 97b6bd5
+** TEST BUILD SUCCEEDED **

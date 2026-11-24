@@ -1,0 +1,110 @@
+[
+  {
+    "attachments" : [
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "6478AFFB-AE17-412A-A1E5-51BCFFD300B6",
+        "deviceName" : "iPhone 17 Pro",
+        "exportedFileName" : "14A68DAD-3774-4C6A-A3EE-961DD895E015.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "caught-up_0_98BF4975-1701-461F-81A4-5B2D60791A17.png",
+        "timestamp" : 1795527872.486
+      },
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "6478AFFB-AE17-412A-A1E5-51BCFFD300B6",
+        "deviceName" : "iPhone 17 Pro",
+        "exportedFileName" : "40EB6754-FF00-4CC2-BB46-CF4A257A1854.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "playing_0_050AC2F6-939C-4420-93BD-075C1DDFC284.png",
+        "timestamp" : 1795527840.027
+      }
+    ],
+    "testIdentifier" : "IntegrationTests/test1PlaysAndMovesOnWhileInTheBackground()",
+    "testIdentifierURL" : "test://com.apple.xcode/Encore/EncoreUITests/IntegrationTests/test1PlaysAndMovesOnWhileInTheBackground"
+  },
+  {
+    "attachments" : [
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "6478AFFB-AE17-412A-A1E5-51BCFFD300B6",
+        "deviceName" : "iPhone 17 Pro",
+        "exportedFileName" : "F931266E-C8CB-459E-A7E8-33F6C9A51077.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "not-encore_0_739B8C32-148D-4B16-9FF5-ED2F2BE83175.png",
+        "timestamp" : 1795528188.274
+      },
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "6478AFFB-AE17-412A-A1E5-51BCFFD300B6",
+        "deviceName" : "iPhone 17 Pro",
+        "exportedFileName" : "57EF5F7F-CFE6-4D99-846D-8C85C2A3221E.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "unreachable_0_11B9DBE7-5B91-451A-A3E5-B5E6FCB2F6A3.png",
+        "timestamp" : 1795528174.331
+      }
+    ],
+    "testIdentifier" : "IntegrationTests/test7FirstScreenAndProblems()",
+    "testIdentifierURL" : "test://com.apple.xcode/Encore/EncoreUITests/IntegrationTests/test7FirstScreenAndProblems"
+  },
+  {
+    "attachments" : [
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "6478AFFB-AE17-412A-A1E5-51BCFFD300B6",
+        "deviceName" : "iPhone 17 Pro",
+        "exportedFileName" : "7CD3DD89-CE84-4C01-A86D-AF2F45546A7F.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "copied-closed_0_3ED7B11D-49E4-48CA-B76D-2ECC1A0CF2EB.png",
+        "timestamp" : 1795528594.096
+      },
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "6478AFFB-AE17-412A-A1E5-51BCFFD300B6",
+        "deviceName" : "iPhone 17 Pro",
+        "exportedFileName" : "3F6BE91C-87AA-4EBB-B0DD-5556113BA8DD.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "icon-menu-closed-1_0_F37AA1BB-7AD5-4602-9147-D69F806BAC9D.png",
+        "timestamp" : 1795528524.377
+      },
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "6478AFFB-AE17-412A-A1E5-51BCFFD300B6",
+        "deviceName" : "iPhone 17 Pro",
+        "exportedFileName" : "B2DA6D5A-BF13-4B78-B607-9F67F407354A.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "home-screen-closed-1_0_891DA86E-7E26-4781-9F4E-FCB042D17661.png",
+        "timestamp" : 1795528459.92
+      },
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "6478AFFB-AE17-412A-A1E5-51BCFFD300B6",
+        "deviceName" : "iPhone 17 Pro",
+        "exportedFileName" : "3A5E5EEA-1DBC-4BD9-82C3-F3D65ACF2A9A.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "copied-running_0_B671DD33-6B9E-47CF-B6FB-3EF6B49C2EE6.png",
+        "timestamp" : 1795528449.744
+      },
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "6478AFFB-AE17-412A-A1E5-51BCFFD300B6",
+        "deviceName" : "iPhone 17 Pro",
+        "exportedFileName" : "F88C3336-B6FA-481A-B7E1-F1F9DFE5F322.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "icon-menu-running-1_0_E83E68BB-C17B-43D0-92B7-2DCBC0EEE878.png",
+        "timestamp" : 1795528382.969
+      },
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "6478AFFB-AE17-412A-A1E5-51BCFFD300B6",
+        "deviceName" : "iPhone 17 Pro",
+        "exportedFileName" : "FCB323A6-6135-4B05-BCAE-F92872D5CCBF.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "home-screen-running-1_0_B0AB3A20-0FE2-4267-BF8E-7B96F6D974A0.png",
+        "timestamp" : 1795528318.027
+      }
+    ],
+    "testIdentifier" : "IntegrationTests/testZCopyDiagnosticsFromTheHomeScreen()",
+    "testIdentifierURL" : "test://com.apple.xcode/Encore/EncoreUITests/IntegrationTests/testZCopyDiagnosticsFromTheHomeScreen"
+  }
+]
